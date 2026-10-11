@@ -1,8 +1,8 @@
 # Color Compass
 
 Color Compass is a small, dependency-light playground for comparing HSL and
-OKLCH colors. It runs in the browser as static HTML, CSS, and classic
-JavaScript, and is served by a Cloudflare Worker at
+OKLCH colors. Astro builds static HTML, CSS, and vanilla TypeScript browser
+interaction, served by a Cloudflare Worker at
 [`senseikatana.com/hueplay/`](https://senseikatana.com/hueplay/).
 
 ## What you can do
@@ -13,6 +13,7 @@ JavaScript, and is served by a Cloudflare Worker at
 - Drag the dual-ring dial to change hue.
 - Inspect the sRGB gamut warning and copy equivalent hex, HSL, and OKLCH values.
 - Share the six-control state through the URL query string.
+- Read the color-model field guide at `/hueplay/historia/`.
 
 ## Project guides
 

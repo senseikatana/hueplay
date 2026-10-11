@@ -27,25 +27,26 @@ bun test
 bun run dev
 ```
 
-The local app is available at `http://localhost:8787/hueplay/`.
+The local app is available at `http://localhost:4321/hueplay/`.
 
 Useful commands:
 
-| Command | Purpose |
-| --- | --- |
-| `bun test` | Run the color-math assertions. |
-| `bun run build` | Copy the static app into `dist/`. |
-| `bun run dev` | Run the app locally through Wrangler. |
-| `bun run deploy` | Build and deploy the Cloudflare Worker. |
+| Command           | Purpose                                       |
+| ----------------- | --------------------------------------------- |
+| `bun test`        | Run the color-math and Worker assertions.     |
+| `bun run check`   | Check Astro and TypeScript types.             |
+| `bun run build`   | Build the static app with Astro into `dist/`. |
+| `bun run dev`     | Run the app locally through Astro.            |
+| `bun run preview` | Preview the built static app.                 |
+| `bun run deploy`  | Build and deploy the Cloudflare Worker.       |
 
 ## Project constraints
 
-- Keep the app as static HTML, CSS, and classic browser scripts; do not add a
-  framework, bundler, or runtime dependency without prior agreement.
-- Keep asset URLs relative (for example, `./styles.css`) so they work below
-  `/hueplay/`.
-- `color.js` owns pure color math and must remain free of DOM access.
-- Route UI writes through `updateUI()` in `index.js`.
+- Keep Astro's static output and vanilla TypeScript interaction model; do not
+  add a UI framework or runtime dependency without prior agreement.
+- Respect Astro's `/hueplay` base when creating asset and navigation URLs.
+- `src/lib/color/` owns pure color math and must remain free of DOM access.
+- Route playground UI writes through `updateUI()` in `src/scripts/dial.ts`.
 - Preserve the real sRGB → OKLab → OKLCH hue conversion. Do not replace it with
   a fixed hue lookup table.
 - Keep CIE `lab()`/`lch()` unsupported unless the project owner explicitly
@@ -58,11 +59,11 @@ Useful commands:
 ## Tests and manual checks
 
 Run `bun test` for changes to color math or parsing. For UI or Worker changes,
-run the relevant tests and, when possible, `bun run dev` to verify the changed
+run `bun run check`, the relevant tests and, when possible, `bun run dev` to verify the changed
 behavior in a browser.
 
 For color behavior, also check the relevant documented invariants and example
-colors in `README.md`. For UI changes, check keyboard focus, mobile layout,
+colors in `README.md` and `src/content/docs/`. For UI changes, check keyboard focus, mobile layout,
 color input errors, gamut warnings, and whether the sliders and output stay in
 sync.
 

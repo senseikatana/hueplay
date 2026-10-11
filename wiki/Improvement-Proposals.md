@@ -4,13 +4,19 @@ This page records concrete, evidence-based proposals for improving Color
 Compass. The linked GitHub issues are the implementation backlog; this page is
 an overview, not a second issue tracker.
 
+These proposals originated in the pre-Astro review. The current code now has
+Worker tests in `tests/worker.test.ts`, a stricter parser, keyboard dial
+controls, and accessible copy feedback. Reconcile each issue with the current
+implementation before starting work; the original observations below are not
+claims that those gaps still exist.
+
 ## Prioritized proposals
 
 ### 1. Protect Worker routing with automated tests
 
 **Why:** The Worker controls redirects, method restrictions, asset forwarding,
-cache behavior, and security headers, but the current automated suite only
-tests color math.
+cache behavior, and security headers. At the time of the initial review, the
+automated suite only tested color math; Worker tests have since been added.
 
 **Proposal:** Add dependency-free Bun tests with a mocked `ASSETS` binding for
 redirects, allowed and rejected methods, unknown paths, and headers on success
@@ -54,7 +60,7 @@ transition and the updated result without a noisy stream of announcements.
 
 ### 4. Make the first-run development guide reproducible
 
-**Why:** The README's clone instructions point to a different repository and
+**Why:** At the initial review, the README's clone instructions pointed to a different repository and
 directory, so a new contributor cannot reliably follow them.
 
 **Proposal:** Correct the clone commands and verify the documented setup and

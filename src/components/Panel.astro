@@ -1,0 +1,93 @@
+---
+/**
+ * Un panel de modelo: título, muestra de color, tres controles con su campo
+ * numérico y el código CSS vivo.
+ *
+ * Los ids siguen la convención `hsl*` / `oklch*` que espera el script del dial,
+ * así que `model` es lo único que cambia entre las dos instancias.
+ */
+interface Field {
+  /** Clave del estado: `hslHue`, `oklchChroma`… */
+  key: string;
+  labelId: string;
+  label: string;
+  min: number;
+  max: number;
+  unit: string;
+  /** Valor inicial. El tono OKLCH lo re-deriva `syncHue` al cargar. */
+  value: number;
+  /** El track lleva gradiente vivo (los sliders de tono). */
+  gradient?: boolean;
+}
+
+interface Props {
+  model: "hsl" | "oklch";
+  title: string;
+  code: string;
+  /** Se enciende cuando el triple no cabe en sRGB. */
+  badge?: boolean;
+  fields: Field[];
+}
+
+const { model, title, code, badge = false, fields } = Astro.props;
+const cap = model === "hsl" ? "Hsl" : "Oklch";
+---
+
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-heading">
+      <h2 class="panel-title">{title}</h2>
+      {badge && (
+        <span class="gamut-badge" id={`${model}Gamut`} hidden>
+          Fuera de Gamut
+        </span>
+      )}
+    </div>
+    <div class="panel-code" id={`${model}Code`}>
+      {code}
+    </div>
+  </div>
+
+  <div
+    class="color-display"
+    id={`${model}Preview`}
+    role="img"
+    aria-label={`Muestra de color ${title}`}
+  ></div>
+
+  {fields.map((f) => (
+    <div class="control-group">
+      <div class="control-label">
+        <span id={f.labelId}>{f.label}</span>
+        <span class="num-wrap">
+          <input
+            type="number"
+            class="num-input"
+            id={`${f.key}Num`}
+            min={f.min}
+            max={f.max}
+            step="1"
+            value={f.value}
+            aria-labelledby={f.labelId}
+            inputmode="numeric"
+          />
+          <span class="num-unit">{f.unit}</span>
+        </span>
+      </div>
+      <input
+        type="range"
+        id={`${f.key}Slider`}
+        min={f.min}
+        max={f.max}
+        step="1"
+        value={f.value}
+        aria-labelledby={f.labelId}
+        data-gradient={f.gradient ? "true" : undefined}
+      />
+    </div>
+  ))}
+</div>
+
+<!-- Referencia al nombre del panel en el script; sin esto Astro elimina la
+     variable y TypeScript la marca como no usada. -->
+<span class="sr-only" data-panel-model={cap} hidden></span>

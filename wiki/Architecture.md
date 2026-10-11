@@ -1,41 +1,35 @@
 # Architecture
 
-The application is deliberately a static, no-framework browser app with a
-small Cloudflare Worker router.
+Color Compass uses Astro 7 and strict TypeScript to build a static site. Browser
+interaction uses vanilla TypeScript, with no UI framework runtime.
 
-## Browser
+## Pages and components
 
-- `index.html` contains the controls, color previews, output chips, and
-  accessible labels.
-- `styles.css` defines the layout, color rings, slider tracks, and focus
-  indicators.
-- `color.js` contains the pure color conversion, gamut, parsing, and formatting
-  functions. It exposes the `ColorMath` global and has no DOM dependency.
-- `index.js` owns DOM state, input listeners, dial pointer handling, UI
-  rendering, clipboard behavior, and URL state.
+- `src/pages/index.astro` contains the playground.
+- `src/pages/historia.astro` renders the color-model field guide.
+- `src/components/` contains the dial, panels, color input, and lightness demo.
+- `src/content/docs/` stores field-guide Markdown, validated by the content
+  collection schema in `src/content.config.ts`.
+- `src/styles/global.css` owns the shared styles and tokens.
 
-Scripts are loaded directly as classic scripts; there is no bundler or
-framework. UI updates are coordinated through `updateUI()`.
+## Color and UI state
 
-## Color state
+`src/lib/color/` owns conversion, hue mapping, parsing, formatting, and shared
+types. It has no DOM access and is imported directly by Bun tests.
 
-The UI keeps separate HSL and OKLCH controls. The equivalent hue is computed
-from the current color rather than copied between panels: changes to HSL
-saturation or lightness can therefore change the OKLCH hue. Pasting an
-`oklch()` value also preserves the entered OKLCH triple so the interface can
-show an out-of-gamut value and warn about it.
+`src/scripts/dial.ts` owns interaction, coordinated UI updates, clipboard
+feedback, and URL state. Equivalent hue is derived from the current HSL color,
+not copied between panels. The six control values are stored in the query
+string; URL updates are debounced and preserve the hash.
 
-The six control values are written to the query string with
-`history.replaceState`, allowing a URL to reproduce the current state without
-adding an entry for every slider movement.
+## Build and routing
 
-## Worker
+`astro.config.mjs` sets the `/hueplay` base and builds static assets into
+`dist/`. `public/preview.png` is the social preview image.
 
-`worker.js` routes the app under `/hueplay/*`, redirects `/` and `/hueplay`,
-allows only GET and HEAD, forwards asset requests to `env.ASSETS`, and applies
-security headers. Unknown paths return 404; there is no SPA fallback. The
-Worker reconstructs asset paths rather than forwarding an untrusted path
-directly.
+`worker.js` routes requests under `/hueplay/*`, permits GET and HEAD, and
+forwards assets to `env.ASSETS`. It applies security headers to responses,
+including redirects and errors. Binding-generated redirects are adjusted to
+preserve the mount prefix. Unknown paths return 404 without an SPA fallback.
 
-`wrangler.jsonc` configures the Worker, static assets in `dist/`, and the
-production custom domains. See [[Deployment]] before deploying.
+See [[Deployment]] for production commands and [[Development]] for checks.

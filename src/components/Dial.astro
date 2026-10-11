@@ -1,0 +1,47 @@
+---
+/**
+ * El dial: dos anillos concéntricos y un puntero.
+ *
+ * El anillo exterior son los 60° exactos de HSL. El interior son los seis
+ * primarios HSL pintados en sus tonos OKLCH *reales*, que es lo que lo hace
+ * verse deformado. Esa asimetría es el contenido, no un error de render.
+ */
+---
+
+<div class="dial-section">
+  <div
+    class="dial-wrapper"
+    id="dialWrapper"
+    role="slider"
+    tabindex="0"
+    aria-label="Tono HSL"
+    aria-valuemin="0"
+    aria-valuemax="359"
+    aria-valuenow="0"
+    aria-valuetext="0 grados"
+  >
+    <div class="ring hsl-ring" id="hslRing" aria-hidden="true"></div>
+    <div class="ring-label label-hsl" aria-hidden="true">
+      HSL
+    </div>
+    <div class="ring-gap" aria-hidden="true"></div>
+    <div class="ring oklch-ring" id="oklchRing" aria-hidden="true"></div>
+    <div class="ring-label label-oklch" aria-hidden="true">
+      OKLCH
+    </div>
+
+    <div class="pointer" id="pointer" aria-hidden="true">
+      <div class="pointer-line"></div>
+    </div>
+
+    <div class="center-hub" aria-hidden="true">
+      <span id="angleDisplay">0°</span>
+      <small>HUE (HSL)</small>
+    </div>
+  </div>
+
+  <p class="dial-info">
+    Arrastrá el dial, o usá las flechas con el teclado, para cambiar el Tono (Hue) de
+    ambos modelos a la vez.
+  </p>
+</div>

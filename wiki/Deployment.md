@@ -1,28 +1,23 @@
 # Deployment
 
-The production site is a Cloudflare Worker with Static Assets, mounted at
-`/hueplay/*` on `senseikatana.com` and `www.senseikatana.com`. It is not hosted
-on GitHub Pages or Cloudflare Pages.
+Production uses a Cloudflare Worker with Static Assets, mounted at `/hueplay/*`
+on `senseikatana.com` and `www.senseikatana.com`.
 
-## Build
+## Build and preview
 
 ```sh
 bun install
 bun run build
+bun run preview
 ```
 
-The build script copies `index.html`, `styles.css`, `color.js`, and `index.js`
-to `dist/`. It also copies `preview.png` when present. Static asset paths in
-the HTML must remain relative so they resolve beneath `/hueplay/`.
+Astro generates static output in `dist/`. Its configuration sets
+`base: "/hueplay"` and trailing slashes. The social preview image is sourced
+from `public/preview.png`.
 
-## Local preview
-
-```sh
-bun run dev
-```
-
-Open `http://localhost:8787/hueplay/`. The Wrangler configuration runs the
-build command before starting the local Worker.
+For source development, run `bun run dev` and open
+`http://localhost:4321/hueplay/`. This is Astro's development server, not a
+Worker runtime check.
 
 ## Production
 
@@ -30,11 +25,14 @@ build command before starting the local Worker.
 bun run deploy
 ```
 
-`wrangler.jsonc` declares the production custom domains. The Worker redirects
-the domain root to `/hueplay/`, redirects `/hueplay` to `/hueplay/`, and serves
-assets under that prefix. Unmatched paths return 404.
+The deploy script runs Astro's build and Wrangler deployment.
+`wrangler.jsonc` declares the custom domains and `ASSETS` binding.
 
-The Worker sets security headers on asset responses and error responses.
-`Cache-Control: no-cache` is used because asset filenames are not fingerprinted.
-The CSP intentionally omits `script-src` to avoid blocking Cloudflare challenge
-scripts.
+The Worker redirects `/` and `/hueplay` to `/hueplay/`, serves assets below
+that prefix, and returns 404 for unknown paths. Binding-generated redirects
+must retain the prefix, including `/hueplay/historia` to
+`/hueplay/historia/`.
+
+Security headers apply to redirects, asset responses, and errors. Assets use
+`Cache-Control: no-cache`. The CSP intentionally omits `script-src` to avoid
+blocking Cloudflare challenge scripts.

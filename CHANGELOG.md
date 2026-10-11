@@ -5,6 +5,137 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Contribution guidelines and repository-backed wiki pages covering development,
+  architecture, color math, deployment, and improvement proposals.
+
+### Changed
+
+- Cleaned up the historical changelog formatting.
+
+## [0.3.0] - 2026-10-11
+
+Migrated to Astro + TypeScript, added a field guide and an interactive demo, and fixed
+the correctness bugs a full review surfaced.
+
+### Added
+
+- **Field guide** at `/hueplay/historia/`, built from Astro content collections. Four
+  documents in Markdown: the history of colour models from Munsell (1905) to CSS Color 4
+  (2023), why the hue axes don't align, the `100%` chroma trap, and gamut mapping.
+- **"La mentira de la luminosidad"**, an interactive demo on the playground. Two rows of
+  swatches at the same declared lightness, with a one-click grey test that removes chroma
+  and isolates the effect. At 50% nominal lightness the HSL row spreads 49.0 points of
+  real perceptual lightness (44.1%–93.1%); the OKLCH row spreads 0.0.
+- `src/lib/color/convert.ts`: `gamutDeltaE()`, `maxSrgbChroma()` and
+  `perceptualGrey()`.
+- `tests/worker.test.ts` — the worker had **zero** tests, which is why the redirect-headers
+  bug below survived.
+- `bun run check` (`astro check`) and `bun run preview`.
+
+### Fixed
+
+- **The gamut badge lied.** It reused the 1e-2 tolerance that the chroma binary search
+  genuinely needs, so it reported "in gamut" for colours the browser was visibly clipping.
+  It is now perceptual: `ΔE_OK` against a 0.01 JND threshold. Pure red
+  `oklch(62.8% 64.42% 29.23)` leaves `[0,1]` by ~4e-5 yet its ΔE is 0.00003 — a containment
+  test would have flagged the most-used colour in the tool.
+- **Grays printed a fabricated hue.** `formatOklch` emitted `atan2` noise, so `#808080`
+  came out as `oklch(59.82% 0% 89.88)` — "0% chroma and a specific hue". Without chroma
+  there is no hue, so it now emits `0`.
+- **Redirects shipped no security headers.** `Response.redirect()` returns a bare response.
+  A first visit over `http://` never received HSTS.
+- **Shared URLs silently discarded `oklchHue`** — startup re-derived it from the HSL panel.
+- **The dial was not keyboard-operable.** It is the primary control; it now has
+  `role="slider"`, arrow / `Shift`+arrow / `Home` / `End`, and a synced `aria-valuenow`.
+- Forced synchronous layout on every drag frame (read-after-write reflow). The dial rect
+  is now cached and invalidated on resize/scroll.
+- `history.replaceState` ran per event; Safari throws past ~100 calls / 30 s and the
+  swallowed error meant the shareable URL stopped updating mid-drag. Now debounced, and
+  it preserves the hash.
+- Three WCAG AA contrast failures (`.input-note` 3.89:1, `::placeholder` 3.45:1,
+  `.center-hub small` 4.49:1). Consolidated under a verified `--muted` token (4.61:1 worst
+  case).
+- `parseFloat` accepted trailing garbage, so `hsl(0 50zz% 50%)` parsed as a valid colour.
+  The parser now follows the CSS grammar, and CSS angle units (`deg`/`grad`/`rad`/`turn`)
+  parse properly instead of by accident.
+- A second finger on the dial fought the first over the hue; only one pointer is tracked.
+- `oklchHueToHslHue` could return `360`, making the panel and the chip print different
+  strings for the same colour.
+- Copy confirmation was not announced to screen readers; out-of-range numeric input gave
+  no `aria-invalid`; the inline error was hidden rather than cleared.
+- `?hslHue=` (empty value) reset the hue to 0 instead of being ignored.
+- `oklchHueToHslHue` recomputed 360 full conversions per drag frame; the forward table is
+  now memoised per `(s, l)`.
+- `..` traversal check missed percent-encoding (`%2e%2e`), and an unguarded
+  `env.ASSETS.fetch` returned the runtime's 1101 page with no security headers.
+- `.github/` was silently ignored by the `.*` rule.
+- An OSC-8 terminal escape had leaked into this file.
+- Removed a dead `transition: background` on `.ring` (`background-image` is not
+  interpolable) and replaced fixed `2rem` padding with `clamp()` (a 320px viewport left
+  6px of slack).
+
+### Security
+
+From an AppSec review. **No exploitable vulnerability was found** — the app has no
+auth, no database, no forms and no user-content sink. The hypotheses that were tested
+and cleared: ReDoS in the colour parser, XSS via `innerHTML`, path traversal, and open
+redirect.
+
+- **`/hueplay/historia` was unreachable without a trailing slash.** With
+  `html_handling: "auto-trailing-slash"`, the assets binding redirects
+  `/historia` → `/historia/`, but composes that `Location` from the _site_ root, which
+  does not know about Astro's `base: "/hueplay"`. The worker forwarded it verbatim, so
+  a hand-typed or shared link without the trailing slash landed on a 404. The worker
+  now re-applies the base to redirects the binding generates. Reproduced and fixed on
+  the real `wrangler dev` runtime, not just against a mock.
+- The `..` guard in the worker is bypassable as a _code invariant_ by double-encoding
+  (`%252e%252e%252f` decodes once to `%2e%2e%2f`, which contains no literal `..`). It
+  was not exploitable — the assets binding does not re-decode and is directory-scoped —
+  but the comment claiming otherwise was wrong. Added a second layer that normalises the
+  decoded path through `URL` before the binding ever sees it, and corrected the comment.
+- `formatHex`, `formatHsl` and `formatOklch` could emit `NaN` into their output strings,
+  because `clamp(NaN, …)` returns `NaN` and `NaN.toString(16)` is `"NaN"`. Not
+  reachable through the UI, but the functions are public API.
+- `parseOkLchTriple` only checked that its values were finite, not that they were in the
+  range its own doc comment promises, so `oklch(1e5 0.15 30)` returned `l: 100000`. It
+  now clamps to the documented range, which also makes the library agree with the
+  sliders.
+
+### Cleared, with measurements
+
+- **ReDoS.** Every regex in the parser is strictly linear. Doubling the input roughly
+  doubles the time (measured 1.93×, 1.98×, 1.99× on the three expensive paths);
+  catastrophic backtracking would show well over 10×. `NUMBER_RE` has no nested
+  unbounded quantifier over overlapping character classes. These measurements are now
+  pinned as regression tests rather than kept as ad-hoc benchmarks.
+- **XSS.** Exactly one `innerHTML` in the codebase (the demo's verdict line) and every
+  interpolation is a `toFixed()` on a computed number, which cannot emit `<` or `&`.
+  Everything user-influenced goes through `textContent`.
+- **Open redirect.** The host allow-list rejects `senseikatana.com.evil.com`,
+  `x.workers.dev.attacker.com` and the trailing-dot form. The `*.workers.dev` entry
+  reflects the `Host` header, but `Host` is what routes the request in the first place,
+  so it is a self-redirect rather than an attacker-controlled one.
+- **Supply chain.** `bun audit` clean across 383 packages. All new dependencies are
+  dev-only and none ships to the browser.
+- **Build output.** No source maps, no secrets, no absolute build paths.
+
+### Changed
+
+- **Build:** Astro 7 (which bundles Vite) + TypeScript in strict mode with
+  `noUncheckedIndexedAccess`. `color.js`/`index.js`/`index.html`/`styles.css` are gone,
+  replaced by `src/lib/color/` (pure, DOM-free), `src/scripts/dial.ts` (the island),
+  Astro components and content collections. `scripts/build.sh` is gone; `wrangler.jsonc`
+  runs `astro build`.
+- Dev server is `astro dev` on port **4321** (was `wrangler dev` on 8787).
+- The inverse hue lookup memoises its 360-entry forward table, and the UI batches DOM
+  writes into one `requestAnimationFrame`.
+- Documentation: `AGENTS.md` and `README.md` rewritten for the new architecture, with the
+  invariants and the manual verification checklist.
+
 ## [0.2.1] - 2026-10-11
 
 ### Changed

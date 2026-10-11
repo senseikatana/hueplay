@@ -21,13 +21,16 @@ out-of-gamut warning, and uses a gamut-reduced RGB value for its HSL-side
 conversion.
 
 The formatter uses two decimal places to limit round-trip error. The gamut
-tolerance and conversion details are covered by tests in `tests/color.test.mjs`.
+badge uses perceptual OKLab distance with a `0.01` threshold; it is not strict
+linear-channel containment. Gamut mapping uses a separate search tolerance.
+These semantics are covered in `tests/color.test.ts`.
 
 ## Accepted notation
 
 The input accepts 3-, 4-, 6-, and 8-digit hex (with or without `#`), `rgb()` /
-`rgba()`, `hsl()` / `hsla()`, and `oklch()` in modern or legacy separator
-syntax. Alpha is ignored because the UI has no alpha channel.
+`rgba()`, `hsl()` / `hsla()`, and `oklch()`. Modern and legacy syntax are
+supported where allowed by the CSS grammar, including CSS angle units.
+Alpha is ignored because the UI has no alpha channel.
 
 CIE `lab()` and `lch()` are intentionally unsupported. Do not add them without
 an explicit product decision: their D50-based coordinates and gamut behavior
