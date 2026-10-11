@@ -9,10 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`bun run release`** does the whole loop in one command: check, sync, check again. The
-  final check is the point — it confirms the sync actually left the releases aligned
-  instead of assuming it. `release:check` and `release:sync` stay available for scripts
-  and CI, where chaining them by hand is noise. `--dry-run` shows what it would do.
+- **`bun run release`** does the whole loop in one command: check, sync, check again.
+  The final check is the point — it confirms the sync actually left the releases
+  aligned instead of assuming it. `release:check` and `release:sync` stay for scripts
+  and CI.
+- **`build` is now a gate, not just a compile.** `bun run build` runs types, unit tests,
+  the build, and then the end-to-end suite, stopping at the first failure. `preview` and
+  `deploy` both go through it, so neither can serve or ship something unverified.
+  `bun run verify` is the first half on its own.
+
+### Fixed
+
+- Three ways the end-to-end suite could fail without saying why, all of them hit while
+  wiring the gate:
+  - A busy port crashed the process with a stack trace, because `server.listen` emits
+    `error` asynchronously instead of rejecting the promise. It now names the port and
+    how to free it.
+  - A half-served page failed the first check with `Cannot read properties of null`. The
+    suite now verifies the page loaded before checking anything, and names the likely
+    cause — `dist/` being rebuilt in parallel.
+  - `test:e2e` no longer builds. It used to, which would have recursed once `build`
+    started calling it: the suite tests the built site, so it has to run after it.
 
 ## [0.3.3] - 2026-10-11
 
