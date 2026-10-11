@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test:e2e` no longer builds. It used to, which would have recursed once `build`
     started calling it: the suite tests the built site, so it has to run after it.
 
+- **The entire navigation on `/historia/` pointed nowhere.** Three of its four
+  cross-page links were broken: `./` resolved to the history page itself, and
+  `./historia/` plus `./historia/#03-croma` resolved to a doubled
+  `/hueplay/historia/historia/` and 404'd. `.` resolves against the current
+  directory, not the site root, so from `/hueplay/historia/` it means the page
+  you are already on. Both pages now build paths from `import.meta.env.BASE_URL`.
+- The end-to-end suite now resolves every same-origin link on both pages and
+  fetches it, rather than only checking that a fragment matches an id. Every
+  broken href above is well-formed, so the old check could not have caught it.
+
 ## [0.3.3] - 2026-10-11
 
 The changelog becomes the source of truth, and the tools that keep the releases
