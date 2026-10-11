@@ -1,0 +1,57 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../layouts/Base.astro";
+
+// Orden estable por el campo `order` del frontmatter, no por nombre de archivo.
+const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Base
+  title="Los modelos de color, de Munsell a oklch() — Color Compass"
+  description="Por qué los ejes de tono de HSL y OKLCH no coinciden: la historia de los modelos de color desde Munsell (1905) hasta CSS Color 4, con el mapeo de tono, la trampa del 100% de croma y el gamut mapping."
+>
+  <nav class="site-nav">
+    <a href="./">Playground</a>
+    <span aria-hidden="true">·</span>
+    <a href="./historia/" aria-current="page">
+      Los modelos de color
+    </a>
+  </nav>
+
+  <div class="docs">
+    <h1>Los modelos de color</h1>
+    <p>
+      Por qué el rojo es 0° en HSL y 29° en OKLCH, y por qué no existe una tabla que
+      traduzca uno en el otro.
+    </p>
+
+    <ul class="timeline">
+      {docs.map((doc) => (
+        <li>
+          <a href={`#${doc.id}`}>
+            <span class="timeline-year">{doc.data.year ?? "—"}</span>
+            <h2 class="timeline-title">{doc.data.title}</h2>
+          </a>
+          <p class="timeline-desc">{doc.data.description}</p>
+        </li>
+      ))}
+    </ul>
+
+    {docs.map(async (doc) => {
+      const { Content } = await render(doc);
+      // El id va en un envoltorio, no en un encabezado del markdown: el
+      // id de la colección sale del nombre del archivo y los h2 del cuerpo
+      // no lo tienen.
+      return (
+        <section id={doc.id}>
+          <Content />
+        </section>
+      );
+    })}
+  </div>
+
+  <div class="doc-nav">
+    <a href="./">← Volver al playground</a>
+    <a href="./historia/#03-croma">Trampa de la croma →</a>
+  </div>
+</Base>

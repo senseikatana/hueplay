@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-11
+
+Migrated to Astro + TypeScript, added a field guide and an interactive demo, and fixed
+the correctness bugs a full review surfaced.
+
+### Added
+
+- **Field guide** at `/hueplay/historia/`, built from Astro content collections. Four
+  documents in Markdown: the history of colour models from Munsell (1905) to CSS Color 4
+  (2023), why the hue axes don't align, the `100%` chroma trap, and gamut mapping.
+- **"La mentira de la luminosidad"**, an interactive demo on the playground. Two rows of
+  swatches at the same declared lightness, with a one-click grey test that removes chroma
+  and isolates the effect. At 50% nominal lightness the HSL row spreads 49.0 points of
+  real perceptual lightness (44.1%–93.1%); the OKLCH row spreads 0.0.
+- `src/lib/color/convert.ts`: `gamutDeltaE()`, `maxSrgbChroma()` and
+  `perceptualGrey()`.
+- `tests/worker.test.ts` — the worker had **zero** tests, which is why the redirect-headers
+  bug below survived.
+- `bun run check` (`astro check`) and `bun run preview`.
+
+### Fixed
+
+- **The gamut badge lied.** It reused the 1e-2 tolerance that the chroma binary search
+  genuinely needs, so it reported "in gamut" for colours the browser was visibly clipping.
+  It is now perceptual: `ΔE_OK` against a 0.01 JND threshold. Pure red
+  `oklch(62.8% 64.42% 29.23)` leaves `[0,1]` by ~4e-5 yet its ΔE is 0.00003 — a containment
+  test would have flagged the most-used colour in the tool.
+- **Grays printed a fabricated hue.** `formatOklch` emitted `atan2` noise, so `#808080`
+  came out as `oklch(59.82% 0% 89.88)` — "0% chroma and a specific hue". Without chroma
+  there is no hue, so it now emits `0`.
+- **Redirects shipped no security headers.** `Response.redirect()` returns a bare response.
+  A first visit over `http://` never received HSTS.
+- **Shared URLs silently discarded `oklchHue`** — startup re-derived it from the HSL panel.
+- **The dial was not keyboard-operable.** It is the primary control; it now has
+  `role="slider"`, arrow / `Shift`+arrow / `Home` / `End`, and a synced `aria-valuenow`.
+- Forced synchronous layout on every drag frame (read-after-write reflow). The dial rect
+  is now cached and invalidated on resize/scroll.
+- `history.replaceState` ran per event; Safari throws past ~100 calls / 30 s and the
+  swallowed error meant the shareable URL stopped updating mid-drag. Now debounced, and
+  it preserves the hash.
+- Three WCAG AA contrast failures (`.input-note` 3.89:1, `::placeholder` 3.45:1,
+  `.center-hub small` 4.49:1). Consolidated under a verified `--muted` token (4.61:1 worst
+  case).
+- `parseFloat` accepted trailing garbage, so `hsl(0 50zz% 50%)` parsed as a valid colour.
+  The parser now follows the CSS grammar, and CSS angle units (`deg`/`grad`/`rad`/`turn`)
+  parse properly instead of by accident.
+- A second finger on the dial fought the first over the hue; only one pointer is tracked.
+- `oklchHueToHslHue` could return `360`, making the panel and the chip print different
+  strings for the same colour.
+- Copy confirmation was not announced to screen readers; out-of-range numeric input gave
+  no `aria-invalid`; the inline error was hidden rather than cleared.
+- `?hslHue=` (empty value) reset the hue to 0 instead of being ignored.
+- `oklchHueToHslHue` recomputed 360 full conversions per drag frame; the forward table is
+  now memoised per `(s, l)`.
+- `..` traversal check missed percent-encoding (`%2e%2e`), and an unguarded
+  `env.ASSETS.fetch` returned the runtime's 1101 page with no security headers.
+- `.github/` was silently ignored by the `.*` rule.
+- An OSC-8 terminal escape had leaked into this file.
+- Removed a dead `transition: background` on `.ring` (`background-image` is not
+  interpolable) and replaced fixed `2rem` padding with `clamp()` (a 320px viewport left
+  6px of slack).
+
+### Changed
+
+- **Build:** Astro 7 (which bundles Vite) + TypeScript in strict mode with
+  `noUncheckedIndexedAccess`. `color.js`/`index.js`/`index.html`/`styles.css` are gone,
+  replaced by `src/lib/color/` (pure, DOM-free), `src/scripts/dial.ts` (the island),
+  Astro components and content collections. `scripts/build.sh` is gone; `wrangler.jsonc`
+  runs `astro build`.
+- Dev server is `astro dev` on port **4321** (was `wrangler dev` on 8787).
+- The inverse hue lookup memoises its 360-entry forward table, and the UI batches DOM
+  writes into one `requestAnimationFrame`.
+- Documentation: `AGENTS.md` and `README.md` rewritten for the new architecture, with the
+  invariants and the manual verification checklist.
+
 ## [0.2.1] - 2026-10-11
 
 Maintenance release with 2 changes.
@@ -12,7 +87,7 @@ Maintenance release with 2 changes.
 - [x] 📦 build(bun.lock): add eslint and wrangler to package.json
   - `bun.lock`
   - `package.json`
-- [x] 🔹 ]7;file://localhost/home/senseikatana/Proyectos/hueplaybun add v1.4.3 (c6da4a4d3)
+- [x] 🔹 chore: upgrade Bun to v1.4.3 (c6da4a4d3)
   - `.gitignore`
   - `AGENTS.md`
   - `LICENSE`
