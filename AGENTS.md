@@ -124,7 +124,7 @@ correct; there are tests pinning both values. Do not "fix" it.
 
 ## Verification
 
-1. `bun test` — 58 tests, ~37k assertions. Anything touching `src/lib/color` must leave
+1. `bun test` — 71 tests, ~37k assertions. Anything touching `src/lib/color` must leave
    it green.
 2. `bun run check` — zero type errors.
 3. `bun run dev` and load `http://localhost:4321/hueplay/`.
@@ -150,6 +150,12 @@ correct; there are tests pinning both values. Do not "fix" it.
     `oklchHue`, which is easy to clobber by re-deriving it.
 13. Open `/hueplay/historia/`: four documents render, the timeline cards link to working
     anchors, and tables/code blocks are styled.
+14. Open `/hueplay/historia` **without the trailing slash** and follow the redirect. It
+    must land on `/hueplay/historia/` and return 200. This is the one that regressed:
+    `auto-trailing-slash` composes its `Location` from the site root, which does not
+    know about `base: "/hueplay"`, so the worker has to re-apply the prefix. If you
+    change `html_handling`, the mount path or the base, re-check this — testing only
+    the slashed form is exactly what let it through.
 
 ## Rules
 

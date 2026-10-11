@@ -67,6 +67,51 @@ the correctness bugs a full review surfaced.
   interpolable) and replaced fixed `2rem` padding with `clamp()` (a 320px viewport left
   6px of slack).
 
+### Security
+
+From an AppSec review. **No exploitable vulnerability was found** — the app has no
+auth, no database, no forms and no user-content sink. The hypotheses that were tested
+and cleared: ReDoS in the colour parser, XSS via `innerHTML`, path traversal, and open
+redirect.
+
+- **`/hueplay/historia` was unreachable without a trailing slash.** With
+  `html_handling: "auto-trailing-slash"`, the assets binding redirects
+  `/historia` → `/historia/`, but composes that `Location` from the _site_ root, which
+  does not know about Astro's `base: "/hueplay"`. The worker forwarded it verbatim, so
+  a hand-typed or shared link without the trailing slash landed on a 404. The worker
+  now re-applies the base to redirects the binding generates. Reproduced and fixed on
+  the real `wrangler dev` runtime, not just against a mock.
+- The `..` guard in the worker is bypassable as a _code invariant_ by double-encoding
+  (`%252e%252e%252f` decodes once to `%2e%2e%2f`, which contains no literal `..`). It
+  was not exploitable — the assets binding does not re-decode and is directory-scoped —
+  but the comment claiming otherwise was wrong. Added a second layer that normalises the
+  decoded path through `URL` before the binding ever sees it, and corrected the comment.
+- `formatHex`, `formatHsl` and `formatOklch` could emit `NaN` into their output strings,
+  because `clamp(NaN, …)` returns `NaN` and `NaN.toString(16)` is `"NaN"`. Not
+  reachable through the UI, but the functions are public API.
+- `parseOkLchTriple` only checked that its values were finite, not that they were in the
+  range its own doc comment promises, so `oklch(1e5 0.15 30)` returned `l: 100000`. It
+  now clamps to the documented range, which also makes the library agree with the
+  sliders.
+
+### Cleared, with measurements
+
+- **ReDoS.** Every regex in the parser is strictly linear. Doubling the input roughly
+  doubles the time (measured 1.93×, 1.98×, 1.99× on the three expensive paths);
+  catastrophic backtracking would show well over 10×. `NUMBER_RE` has no nested
+  unbounded quantifier over overlapping character classes. These measurements are now
+  pinned as regression tests rather than kept as ad-hoc benchmarks.
+- **XSS.** Exactly one `innerHTML` in the codebase (the demo's verdict line) and every
+  interpolation is a `toFixed()` on a computed number, which cannot emit `<` or `&`.
+  Everything user-influenced goes through `textContent`.
+- **Open redirect.** The host allow-list rejects `senseikatana.com.evil.com`,
+  `x.workers.dev.attacker.com` and the trailing-dot form. The `*.workers.dev` entry
+  reflects the `Host` header, but `Host` is what routes the request in the first place,
+  so it is a self-redirect rather than an attacker-controlled one.
+- **Supply chain.** `bun audit` clean across 383 packages. All new dependencies are
+  dev-only and none ships to the browser.
+- **Build output.** No source maps, no secrets, no absolute build paths.
+
 ### Changed
 
 - **Build:** Astro 7 (which bundles Vite) + TypeScript in strict mode with

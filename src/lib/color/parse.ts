@@ -183,7 +183,11 @@ export function parseOkLchTriple(str: string): Oklch | null {
   const C = readRatio(t[1] as string, CHROMA_UNIT);
   const H = readAngle(t[2] as string);
   if (![L, C, H].every(Number.isFinite)) return null;
-  return { l: L, c: C, h: ((H % 360) + 360) % 360 };
+  // El contrato del doc dice "L 0..1, C 0..0.4+". Antes sólo se comprobaba que
+  // fueran finitos, así que `oklch(1e5 0.15 30)` devolvía l=100000. No era
+  // explotable —oklchToRgb recorta y la UI recorta otra vez— pero una función
+  // pública no debería devolver valores fuera del rango que documenta.
+  return { l: clamp(L, 0, 1), c: Math.max(0, C), h: ((H % 360) + 360) % 360 };
 }
 
 /** Cualquier color CSS soportado -> sRGB, o null si no se reconoce. */
@@ -214,8 +218,13 @@ const clampInt = (x: number, lo: number, hi: number): number =>
   clamp(Math.round(x), lo, hi);
 
 export function formatHex(r: number, g: number, b: number): string {
+  // `clamp(NaN, …)` devuelve NaN (las dos comparaciones son falsas) y NaN.toString(16)
+  // es "NaN", así que un canal no finito producía "#NaN8080". No hay forma de
+  // llegar acá por la UI —el parser rechaza canales no finitos y hslToRgb
+  // recorta— pero la función es pública y un llamador futuro no debería
+  // heredar un NaN en la salida.
   const q = (v: number) =>
-    clampInt(v * 255, 0, 255)
+    clampInt(Number.isFinite(v) ? v * 255 : 0, 0, 255)
       .toString(16)
       .padStart(2, "0");
   return `#${q(r)}${q(g)}${q(b)}`;
@@ -223,7 +232,8 @@ export function formatHex(r: number, g: number, b: number): string {
 
 export function formatHsl(r: number, g: number, b: number): string {
   const { h, s, l } = rgbToHsl(r, g, b);
-  return `hsl(${clampInt(h, 0, 359)}, ${fmt(s)}%, ${fmt(l)}%)`;
+  const ok = (v: number) => (Number.isFinite(v) ? v : 0);
+  return `hsl(${clampInt(ok(h), 0, 359)}, ${fmt(ok(s))}%, ${fmt(ok(l))}%)`;
 }
 
 /**
@@ -238,8 +248,11 @@ export function formatHsl(r: number, g: number, b: number): string {
  */
 export function formatOklch(r: number, g: number, b: number): string {
   const o = rgbToOklch(r, g, b);
-  const hue = o.c < ACHROMATIC_C ? 0 : fmt(o.h);
-  return `oklch(${fmt(o.l * 100)}% ${fmt((o.c / CHROMA_UNIT) * 100)}% ${hue})`;
+  // Misma defensa que formatHex/formatHsl: rgbToOklch de un canal no finito
+  // propaga NaN hasta L, C y H, y `NaN.toFixed(2)` es "NaN".
+  const num = (v: number) => (Number.isFinite(v) ? v : 0);
+  const hue = num(o.c) < ACHROMATIC_C ? 0 : fmt(num(o.h));
+  return `oklch(${fmt(num(o.l) * 100)}% ${fmt((num(o.c) / CHROMA_UNIT) * 100)}% ${hue})`;
 }
 
 export { CHROMA_UNIT, roundHue };

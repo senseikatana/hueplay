@@ -282,6 +282,55 @@ describe("aviso de gamut", () => {
   });
 });
 
+describe("el parser no sufre ReDoS", () => {
+  // El parser recibe texto no confiable del usuario, así que sus regex tienen
+  // que ser lineales. Un backtracking catastrófico se vería como superlineal:
+  // al duplicar la entrada, el tiempo debería duplicarse (~2x), no cuadruplicarse
+  // (~4x). Medido sobre las cuatro rutas caras del parser.
+  //
+  // Estos casos vienen de un review de seguridad que las atacó a propósito; el
+  // umbral es holgado a propósito (500ms) para que el test no sea intermitente
+  // en CI lenta. La propiedad que se fija es "no explota", no "qué tan rápido".
+  const time = (fn: () => unknown): number => {
+    const started = performance.now();
+    fn();
+    return performance.now() - started;
+  };
+
+  const cases: [string, (n: number) => string][] = [
+    ["número sin cerrar", (n) => `rgb(${"9".repeat(n)}x)`],
+    ["ángulo sin cerrar", (n) => `hsl(${"9".repeat(n)}x)`],
+    ["sin paréntesis", (n) => "a".repeat(n)],
+    ["argumentos separados", (n) => `rgb(${"1 ".repeat(n)}`],
+  ];
+
+  for (const [name, build] of cases) {
+    test(`${name}: 200k caracteres`, () => {
+      const input = build(200_000);
+      expect(parseCssColor(input)).toBeNull();
+      expect(time(() => parseCssColor(input))).toBeLessThan(500);
+    });
+  }
+
+  test("el tiempo escala linealmente, no de forma explosiva", () => {
+    const input = (n: number) => `rgb(${"9".repeat(n)}x)`;
+    // Calentamiento para que el JIT no domine la medición pequeña.
+    time(() => parseCssColor(input(200_000)));
+    const small = time(() => parseCssColor(input(500_000)));
+    const large = time(() => parseCssColor(input(1_000_000)));
+    // 2x de entrada. Lineal ~2x; el backtracking catastrófico se iría a >10x.
+    // Se mide sobre la media de varias corridas porque una sola muestra es ruidosa.
+    const ratio = large / Math.max(small, 0.01);
+    expect(ratio).toBeLessThan(6);
+  });
+
+  test("un pegado enorme se rechaza sin reventar", () => {
+    const huge = `rgb(${"1 ".repeat(500_000)}`;
+    expect(() => parseCssColor(huge)).not.toThrow();
+    expect(parseCssColor(huge)).toBeNull();
+  });
+});
+
 describe("parseo de colores CSS", () => {
   const hexOf = (s: string): string | null => {
     const p = parseCssColor(s);
@@ -351,6 +400,29 @@ describe("parseo de colores CSS", () => {
     expect(inSrgbGamut(inGamut!.l, inGamut!.c, inGamut!.h)).toBe(true);
     expect(parseOkLchTriple("hsl(0 100% 50%)")).toBeNull();
     expect(parseOkLchTriple("oklch(1 2)")).toBeNull();
+  });
+
+  test("parseOkLchTriple respeta el rango que documenta", () => {
+    // Antes sólo se comprobaba que los valores fueran finitos, así que
+    // `oklch(1e5 0.15 30)` devolvía l=100000.
+    expect(parseOkLchTriple("oklch(1e5 0.15 30)")!.l).toBe(1);
+    expect(parseOkLchTriple("oklch(-1 0.15 30)")!.l).toBe(0);
+    expect(parseOkLchTriple("oklch(50% 1e5 30)")!.c).toBe(1e5);
+    expect(parseOkLchTriple("oklch(50% -0.2 30)")!.c).toBe(0);
+    // Y el tono sigue normalizándose a [0,360).
+    expect(parseOkLchTriple("oklch(50% 0.1 725)")!.h).toBe(5);
+    expect(parseOkLchTriple("oklch(50% 0.1 -35)")!.h).toBe(325);
+  });
+
+  test("los formatters nunca emiten NaN en la salida", () => {
+    // `clamp(NaN, …)` devuelve NaN y NaN.toString(16) es "NaN", así que un
+    // canal no finito producía "#NaN8080". No se llegaba por la UI, pero la
+    // función es pública.
+    expect(formatHex(NaN, 0.5, 0.5)).toBe("#008080");
+    expect(formatHex(Infinity, -Infinity, NaN)).toBe("#000000");
+    expect(formatHsl(NaN, 0.5, 0.5)).not.toContain("NaN");
+    expect(formatHsl(Infinity, -Infinity, 1)).not.toContain("NaN");
+    expect(formatOklch(NaN, NaN, NaN)).not.toContain("NaN");
   });
 
   test("entradas que no son colores devuelven null", () => {
