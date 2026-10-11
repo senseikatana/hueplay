@@ -64,6 +64,7 @@ bun run deploy   # astro build && wrangler deploy
 bun test         # colour maths + worker routing
 bun run test:e2e # build + real browser (needs Chrome/Chromium on PATH)
 bun run check    # astro check (types)
+bun run release       # check -> sync -> check, in one command
 bun run release:check # version <-> CHANGELOG <-> tags <-> releases
 bun run release:sync  # push the CHANGELOG section onto each GitHub release
 ```
@@ -87,10 +88,15 @@ drift is checked, not remembered:
 1. Edit `CHANGELOG.md`, and bump `package.json` in the same commit. Every version in
    the CHANGELOG needs a tag, or the section is a phantom.
 2. `bun run release:check` — fails if `package.json`, the CHANGELOG, the tags and the
-   GitHub releases disagree, or if `main` has commits above the newest tag.
-3. Merge to `main`, tag, then `bun run release:sync` to push each section onto its
-   release. `gh release create` writes an auto-generated commit list by default, which
-   is not a changelog — `sync` overwrites it with the real text.
+   GitHub releases disagree, or if a ref is above the newest tag without an
+   `[Unreleased]` section recording it. `RELEASE_REF=origin/dev` checks another branch.
+3. Merge to `main`, tag, then `bun run release` — one command that syncs every release
+   and re-checks afterwards. `gh release create` writes an auto-generated commit list by
+   default, which is not a changelog; the sync overwrites it with the real text.
+
+`bun run release` refuses to sync when the first check fails. A missing tag or a version
+with no section is not something syncing can fix, and doing it anyway would push a
+changelog onto a release that should not exist.
 
 `0.1.0` and `0.2.0` predate the available git history and cannot be tagged; they are
 listed as `UNTAGGED_BY_DESIGN` in `scripts/check-release.mjs` so the rule keeps its

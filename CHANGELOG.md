@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`bun run release`** does the whole loop in one command: check, sync, check again. The
+  final check is the point — it confirms the sync actually left the releases aligned
+  instead of assuming it. `release:check` and `release:sync` stay available for scripts
+  and CI, where chaining them by hand is noise. `--dry-run` shows what it would do.
+
 ## [0.3.3] - 2026-10-11
 
 The changelog becomes the source of truth, and the tools that keep the releases
