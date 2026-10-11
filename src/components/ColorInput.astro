@@ -44,7 +44,30 @@
       <span class="chip-key">oklch()</span>
       <code id="chipOklch">oklch(0% 0% 0)</code>
     </button>
+    <!-- device-cmyk(): texto, NUNCA color. Ningún navegador soporta la
+         función (MDN: "Currently, no browsers support this feature"), así que
+         pintar el swatch con esto dejaría un rectángulo vacío. La función está
+         en el chip como referencia para cuando se implemente, y el aviso de
+         abajo explica por qué no se puede usar hoy. -->
+    <button
+      type="button"
+      class="chip chip-text"
+      data-fmt="device-cmyk"
+      id="chipCmyk"
+      title="device-cmyk() — texto de referencia, no renderizable por ningún navegador"
+    >
+      <span class="chip-key">device-cmyk()</span>
+      <code id="chipCmykValue">device-cmyk(0% 0% 0% 0%)</code>
+    </button>
   </div>
+
+  <p class="input-note input-note-cmyk" id="cmykNote">
+    <strong>device-cmyk() no renderiza todavía.</strong> Ningún navegador la implementa
+    y es <em>device-dependent</em>: la misma tupla da colores distintos según la
+    impresora. Va como texto de referencia, no como color vivo. La conversión que ves es
+    una fórmula ingenua —una reparametrización de sRGB, como HSL—, no una predicción de
+    tinta.
+  </p>
 
   <!-- Región de anuncio para el color actual. Se escribe con retardo, así que
        arrastrar un slider no produce un announcement por frame. -->

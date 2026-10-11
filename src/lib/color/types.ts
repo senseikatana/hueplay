@@ -28,3 +28,17 @@ export interface Oklch {
 
 /** Triple sRGB lineal. Puede salirse de [0,1]: eso es justamente el gamut check. */
 export type LinearRgb = readonly [number, number, number];
+
+/**
+ * CMYK con c, m, y, k en [0,1].
+ *
+ * NO es un espacio colorimétrico: es la cantidad de tinta de cada cartucho, y
+ * dos impresoras distintas con la misma tupla dan colores distintos. Ver
+ * `convert.ts` para por qué la conversión de acá es ingenua.
+ */
+export interface Cmyk {
+  c: number;
+  m: number;
+  y: number;
+  k: number;
+}

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   CHROMA_UNIT,
   clearHueCache,
+  cmykToRgb,
+  formatDeviceCmyk,
   formatHex,
   formatHsl,
   formatOklch,
@@ -12,9 +14,12 @@ import {
   oklchHueToHslHue,
   oklchToRgb,
   parseCssColor,
+  parseDeviceCmyk,
+  parseHsl,
   parseOkLchTriple,
   perceptualGrey,
   primaryOklchHues,
+  rgbToCmyk,
   rgbToHsl,
   rgbToOklabLightness,
   rgbToOklch,
@@ -491,5 +496,180 @@ describe("parseo de colores CSS", () => {
     // nunca revela la diferencia.
     expect(formatHex(...onScreen)).toBe("#ffd000");
     expect(formatHex(p.r, p.g, p.b)).toBe("#ffd000");
+  });
+});
+
+// ============================================================================
+// CMYK
+//
+//device-cmyk() es device-dependent y a octubre de 2026 no la implementa
+// ningún navegador (MDN: "Currently, no browsers support this feature"). Lo que
+// se prueba acá es la fórmula INGENUA de reparametrización de sRGB -- lo mismo
+// que HSL respecto de sRGB-- y sus casos degenerados, que son los que rompen
+// estas fórmulas si no se miran.
+// ============================================================================
+
+describe("CMYK: la fórmula ingenua sRGB <-> CMYK", () => {
+  test("los primarios salen sin K, como espera la convención de impresión", () => {
+    // K = 1 - max(r,g,b) da 0 para cualquier primario saturado: el color se
+    // hace con las tres tintas de color y el negro no se toca.
+    expect(rgbToCmyk(1, 0, 0)).toEqual({ c: 0, m: 1, y: 1, k: 0 });
+    expect(rgbToCmyk(0, 1, 0)).toEqual({ c: 1, m: 0, y: 1, k: 0 });
+    expect(rgbToCmyk(0, 0, 1)).toEqual({ c: 1, m: 1, y: 0, k: 0 });
+    expect(rgbToCmyk(1, 1, 0)).toEqual({ c: 0, m: 0, y: 1, k: 0 });
+  });
+
+  test("el blanco es 0 0 0 0 y no un K negativo por error de punto flotante", () => {
+    expect(rgbToCmyk(1, 1, 1)).toEqual({ c: 0, m: 0, y: 0, k: 0 });
+  });
+
+  // El negro puro es EL caso degenerado de esta fórmula: k = 1 hace que
+  // 1 - k = 0 y los tres componentes se calcularían dividiendo por cero. Sin
+  // el corto explícito saldrían NaN, y `Math.round(NaN)` es NaN, así que el
+  // formateador emitiría literalmente "device-cmyk(NaN% NaN% NaN% NaN%)".
+  test("el negro puro no divide por cero: sale 0 0 0 100%", () => {
+    const black = rgbToCmyk(0, 0, 0);
+    expect(black).toEqual({ c: 0, m: 0, y: 0, k: 1 });
+    expect(formatDeviceCmyk(0, 0, 0)).toBe("device-cmyk(0% 0% 0% 100%)");
+
+    // Y ningún componente es NoN, que es lo que se rompería al formatear.
+    for (const ch of [black.c, black.m, black.y, black.k]) {
+      expect(Number.isFinite(ch)).toBe(true);
+    }
+  });
+
+  test("round trip CMYK -> sRGB -> CMYK sobre la grilla completa", () => {
+    for (let r = 0; r <= 1.0001; r += 0.25) {
+      for (let g = 0; g <= 1.0001; g += 0.25) {
+        for (let b = 0; b <= 1.0001; b += 0.25) {
+          const c1 = rgbToCmyk(r, g, b);
+          const [r2, g2, b2] = cmykToRgb(c1.c, c1.m, c1.y, c1.k);
+          const c2 = rgbToCmyk(r2, g2, b2);
+          for (const ch of ["c", "m", "y", "k"] as const) {
+            expect(c2[ch]).toBeCloseTo(c1[ch], 6);
+          }
+        }
+      }
+    }
+  });
+
+  test("cmykToRgb es la inversa exacta de rgbToCmyk, no una aproximación", () => {
+    for (const [r, g, b] of [
+      [1, 0, 0],
+      [0.2, 0.4, 0.6],
+      [0.5, 0.5, 0.5],
+      [0, 0, 0],
+      [1, 1, 1],
+    ] as const) {
+      const k = rgbToCmyk(r, g, b);
+      const back = cmykToRgb(k.c, k.m, k.y, k.k);
+      expect(back[0]).toBeCloseTo(r, 10);
+      expect(back[1]).toBeCloseTo(g, 10);
+      expect(back[2]).toBeCloseTo(b, 10);
+    }
+  });
+
+  test("un gris neutro se reparte entero en K, no en las tres tintas", () => {
+    // 0.5 gris: K = 0.5 y las tres de color en 0. Es lo que distingue esta
+    // fórmula de un CMYK "sin negro" donde el gris sería 33/33/33.
+    const g = rgbToCmyk(0.5, 0.5, 0.5);
+    expect(g.c).toBeCloseTo(0, 6);
+    expect(g.m).toBeCloseTo(0, 6);
+    expect(g.y).toBeCloseTo(0, 6);
+    expect(g.k).toBeCloseTo(0.5, 6);
+  });
+
+  test("el formateador redondea a porcentaje entero", () => {
+    expect(formatDeviceCmyk(1, 0, 0)).toBe("device-cmyk(0% 100% 100% 0%)");
+    expect(formatDeviceCmyk(1, 1, 1)).toBe("device-cmyk(0% 0% 0% 0%)");
+  });
+
+  test("un canal no finito no se filtra al texto como NaN%", () => {
+    // formatHex y formatOklch ya tienen esta defensa; el formateador de CMYK
+    // la necesita igual porque es público.
+    expect(formatDeviceCmyk(Number.NaN, 0, 0)).not.toContain("NaN");
+    expect(formatDeviceCmyk(Number.POSITIVE_INFINITY, 0, 0)).not.toContain("NaN");
+  });
+});
+
+describe("CMYK: parseo de device-cmyk()", () => {
+  test("las dos sintaxis de CSS Color 5 dan el mismo color", () => {
+    const porcentaje = parseCssColor("device-cmyk(0 81% 81% 30%)");
+    const numerico = parseCssColor("device-cmyk(0 0.81 0.81 0.3)");
+    expect(porcentaje).not.toBeNull();
+    expect(numerico).not.toBeNull();
+    expect(porcentaje!.r).toBeCloseTo(numerico!.r, 10);
+    expect(porcentaje!.g).toBeCloseTo(numerico!.g, 10);
+    expect(porcentaje!.b).toBeCloseTo(numerico!.b, 10);
+  });
+
+  test("el ejemplo textual de MDN: device-cmyk(0 81% 81% 30%)", () => {
+    // Viene de la página de MDN para device-cmyk(). K=30% deja el 70% de luz,
+    // y sin tinta en C.
+    const p = parseCssColor("device-cmyk(0 81% 81% 30%)")!;
+    expect(p.r).toBeCloseTo(0.7, 6);
+    expect(p.g).toBeCloseTo(0.7 * 0.19, 6);
+    expect(p.b).toBeCloseTo(0.7 * 0.19, 6);
+  });
+
+  test("el round trip texto -> color -> texto cierra en el porcentaje", () => {
+    // Enteros, así que el round trip es exacto salvo en el redondeo a
+    // porcentaje. Se fija el margen en 1/255, que es un paso de 8 bits.
+    for (const hex of ["#ff0000", "#00ff00", "#0000ff", "#808080", "#ffffff"]) {
+      const p = parseCssColor(hex)!;
+      const back = parseCssColor(formatDeviceCmyk(p.r, p.g, p.b))!;
+      for (const ch of ["r", "g", "b"] as const) {
+        expect(Math.abs(back[ch] - p[ch]) * 255).toBeLessThan(1.01);
+      }
+    }
+  });
+
+  test("`none` se rechaza en vez de asumir 0 en silencio", () => {
+    // MDN documenta que `none` es "componente ausente". Aceptarlo como 0
+    // devolvería un color que nadie pidió; rechazarlo obliga a ser explícito.
+    expect(parseCssColor("device-cmyk(none 81% 81% 30%)")).toBeNull();
+    expect(parseDeviceCmyk("device-cmyk(0 none 81% 30%)")).toBeNull();
+  });
+
+  test("rechaza basura estructural, como el resto de los parsers", () => {
+    for (const bad of [
+      "device-cmyk(0 81% 81%)", // sólo 3 componentes
+      "device-cmyk(0 81zz% 81% 30%)", // basura en un canal
+      "cmyk(0 81% 81% 30%)", // nombre incorrecto
+      "device-cmyk()", // sin argumentos
+      "device-cmyk(0 81% 81% 30%", // paréntesis sin cerrar
+    ]) {
+      expect(parseCssColor(bad)).toBeNull();
+    }
+  });
+
+  // Un valor fuera de rango se RECORTA, no se rechaza: es lo que hace CSS con
+  // hsl(120 150% 50%) y lo que ya hacía esta lib antes de que existiera CMYK.
+  // La tinta no puede ser negativa, así que -5% se trata como 0%.
+  test("fuera de rango se recorta al intervalo, igual que hsl() y oklch()", () => {
+    // Con C = -5% sin recortar, r sería (1 + 0.05) * 0.7 = 0.735. Recortado a
+    // 0% da exactamente 0.7, que es el valor de "sin cian".
+    const negativo = parseCssColor("device-cmyk(0 -5% 81% 30%)")!;
+    expect(negativo.r).toBeCloseTo(0.7, 6);
+    expect(rgbToCmyk(negativo.r, negativo.g, negativo.b).c).toBeCloseTo(0, 10);
+
+    // Y por arriba: 150% de cian se trata como 100%, nunca como un canal
+    // mayor que 1.
+    const sobre = parseCssColor("device-cmyk(150% 0% 0% 0%)")!;
+    expect(sobre.r).toBeCloseTo(0, 10);
+    expect(sobre.g).toBeCloseTo(1, 10);
+
+    // Coherente con hsl, que también recorta en vez de fallar.
+    expect(parseHsl("hsl(120 150% 50%)")).not.toBeNull();
+  });
+
+  test("no rompe el parseo de las notaciones que ya funcionaban", () => {
+    // El orden de la cadena no puede desplazar un oklch() válido a la rama de
+    // CMYK, que es la última.
+    expect(parseCssColor("#ffd000")).not.toBeNull();
+    expect(parseCssColor("oklch(62.8% 64.42% 29.23)")).not.toBeNull();
+    expect(parseCssColor("hsl(120 100% 50%)")).not.toBeNull();
+    // Y lch() sigue rechazada, a propósito.
+    expect(parseCssColor("lch(50% 40 30)")).toBeNull();
   });
 });

@@ -11,8 +11,10 @@
 import {
   CHROMA_UNIT,
   clamp,
+  cmykToRgb,
   hslToRgb,
   oklchToRgb,
+  rgbToCmyk,
   rgbToHsl,
   rgbToOklch,
 } from "./convert";
@@ -77,9 +79,14 @@ const readAngle = (tok: string): number => {
 // --------------------------------------------------------------- estructura
 
 const matchFunc = (str: string, names: string[]): string | null => {
+  // El guion va en la clase a propósito: `device-cmyk()` es una función CSS
+  // válida y con `[a-z]+` no matcheaba nunca, así que ninguna notación con
+  // guion podía entrar por esta puerta. CSS permite además dígitos, `_` y
+  // no-ASCII en un identificador; se acepta el superconjunto y el filtro real
+  // lo hace `names.includes` de abajo.
   const m = String(str)
     .trim()
-    .match(/^([a-z]+)\((.*)\)$/is);
+    .match(/^([a-z][a-z0-9_-]*)\((.*)\)$/is);
   if (!m || m[1] === undefined || m[2] === undefined) return null;
   if (!names.includes(m[1].toLowerCase())) return null;
   return m[2];
@@ -190,7 +197,49 @@ export function parseOkLchTriple(str: string): Oklch | null {
   return { l: clamp(L, 0, 1), c: Math.max(0, C), h: ((H % 360) + 360) % 360 };
 }
 
-/** Cualquier color CSS soportado -> sRGB, o null si no se reconoce. */
+/**
+ * `device-cmyk()` -> sRGB, por la fórmula ingenua de `cmykToRgb`.
+ *
+ * Acepta las dos sintaxis que define CSS Color 5 para esta función:
+ *
+ *   device-cmyk(0 81% 81% 30%)      -- porcentajes
+ *   device-cmyk(0 0.81 0.81 0.3)    -- números en 0..1
+ *
+ * `none` se rechaza en vez de tratarse como 0. MDN documenta que `none`
+ * significa "componente ausente", que en la práctica el motor rellena con 0
+ * para esta función, pero aceptar la palabra y devolver un color sin que
+ * quien escribe sepa qué se eligió es exactamente el tipo de sorpresa que
+ * este parser existe para evitar (ver `readAngle`).
+ *
+ * OJO: el resultado es una APROXIMACIÓN. `device-cmyk()` es device-dependent y
+ * sin `@color-profile` no hay forma de saber a qué gamut pertenece.
+ */
+export function parseDeviceCmyk(str: string): Rgb | null {
+  const inner = matchFunc(str, ["device-cmyk"]);
+  if (inner === null) return null;
+  const t = splitArgs(inner);
+  if (t.length < 4) return null;
+  const read = (tok: string): number => {
+    const s = String(tok).trim();
+    if (s.toLowerCase() === "none") return Number.NaN;
+    return readRatio(s, 1);
+  };
+  const c = read(t[0] as string);
+  const m = read(t[1] as string);
+  const y = read(t[2] as string);
+  const k = read(t[3] as string);
+  if (![c, m, y, k].every(Number.isFinite)) return null;
+  const [r, g, b] = cmykToRgb(c, m, y, k);
+  return { r, g, b, a: 1 };
+}
+
+/**
+ * Cualquier color CSS soportado -> sRGB, o null si no se reconoce.
+ *
+ * `device-cmyk()` entra en la cadena: se acepta como ENTRADA aunque ningún
+ * navegador la renderice. Es la diferencia entre "no lo puedo mostrar" y "no
+ * lo puedo leer", y esta herramienta puede hacer las dos.
+ */
 export function parseCssColor(str: string): Rgb | null {
   const s = String(str).trim();
   if (!s) return null;
@@ -200,7 +249,7 @@ export function parseCssColor(str: string): Rgb | null {
     /^[0-9a-f]{6}$/i.test(s) ||
     /^[0-9a-f]{8}$/i.test(s);
   if (s.startsWith("#") || bareHex) return parseHex(s);
-  return parseRgb(s) ?? parseHsl(s) ?? parseOkLch(s);
+  return parseRgb(s) ?? parseHsl(s) ?? parseOkLch(s) ?? parseDeviceCmyk(s);
 }
 
 // ------------------------------------------------------------------ formato
@@ -253,6 +302,25 @@ export function formatOklch(r: number, g: number, b: number): string {
   const num = (v: number) => (Number.isFinite(v) ? v : 0);
   const hue = num(o.c) < ACHROMATIC_C ? 0 : fmt(num(o.h));
   return `oklch(${fmt(num(o.l) * 100)}% ${fmt((num(o.c) / CHROMA_UNIT) * 100)}% ${hue})`;
+}
+
+/**
+ * sRGB -> la tupla `device-cmyk()` que lo describe, en porcentajes enteros.
+ *
+ * Se emite como TEXTO y nunca como color pintado: a octubre de 2026 ningún
+ * navegador soporta la función (MDN, "Currently, no browsers support this
+ * feature"). El valor es la fórmula ingenua de `rgbToCmyk`, o sea una
+ * reparametrización de sRGB, no una predicción de tinta.
+ *
+ * Enteros y no dos decimales a propósito: acá no hay round trip que proteger
+ * (el formateo de las otras notaciones existe para que el color vuelva), y un
+ * 0% es mucho más legible que un 0.00%. La tupla se emite como texto porque
+ * sigue sin ejecutarse en ningún motor.
+ */
+export function formatDeviceCmyk(r: number, g: number, b: number): string {
+  const { c, m, y, k } = rgbToCmyk(r, g, b);
+  const pct = (v: number) => String(clampInt(Number.isFinite(v) ? v * 100 : 0, 0, 100));
+  return `device-cmyk(${pct(c)}% ${pct(m)}% ${pct(y)}% ${pct(k)}%)`;
 }
 
 export { CHROMA_UNIT, roundHue };

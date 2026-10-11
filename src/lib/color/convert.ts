@@ -5,7 +5,7 @@
 // HSL entra por una puerta lateral (no es un espacio por sí mismo, es una
 // reparametrización de sRGB), igual que CIELAB, que no está aquí a propósito.
 
-import type { Hsl, LinearRgb, Oklch, Rgb } from "./types";
+import type { Cmyk, Hsl, LinearRgb, Oklch, Rgb } from "./types";
 
 /**
  * En CSS Color 4, `100%` de croma en oklch() equivale a 0.4, no a 1.0. Es la
@@ -233,3 +233,67 @@ export const perceptualGrey = (lightness: number): Rgb => {
   const [r, g, b] = oklchToRgb(clamp(lightness, 0, 1), 0, 0);
   return { r, g, b, a: 1 };
 };
+
+// ------------------------------------------------------------------- sRGB <-> CMYK
+//
+// AVISO, LEÉ ESTO ANTES DE TOCAR NADA DE ESTA SECCIÓN.
+//
+// Esta conversión NO es colorimétrica y no puede serlo sin un perfil ICC, que
+// es un archivo de kilobytes que el navegador no carga. Es la fórmula
+// "ingenua" o de/tutorial, la que aparece en cualquier libro de impresión:
+//
+//   K = 1 - max(r, g, b)
+//   C = (1 - r - K) / (1 - K)
+//
+// Es una reparametrización de sRGB, como HSL. Sirve para mostrar una tupla de
+// tinta plausible; NO predice lo que sale de una impresora. `device-cmyk()` es
+// device-dependent justamente por esto: el mismo `device-cmyk(0 81% 81% 30%)`
+// da colores distintos según el equipo, y sin `@color-profile` el navegador
+// no tiene forma de saber cuál.
+//
+// MDN dice, a octubre de 2026, que NINGÚN navegador soporta `device-cmyk()`.
+// Por eso el chip de esta herramienta lo muestra como TEXTO y nunca lo pinta:
+// ofrecerlo como color vivo sería ofrecer algo que no renderiza.
+
+/**
+ * sRGB en [0,1] -> CMYK con c/m/y/k en [0,1], por la fórmula ingenua.
+ *
+ * El caso `1 - K === 0` es el negro puro: la fórmula divide por cero ahí. La
+ * convención estándar es que el negro se escribe `0 0 0 100%` (sin tinta de
+ * color, todo el negro en K), que además es lo más barato de imprimir.
+ */
+export function rgbToCmyk(r: number, g: number, b: number): Cmyk {
+  const R = clamp(r, 0, 1);
+  const G = clamp(g, 0, 1);
+  const B = clamp(b, 0, 1);
+  const k = 1 - Math.max(R, G, B);
+  if (k >= 1) return { c: 0, m: 0, y: 0, k: 1 };
+  const inv = 1 / (1 - k);
+  return {
+    c: clamp((1 - R - k) * inv, 0, 1),
+    m: clamp((1 - G - k) * inv, 0, 1),
+    y: clamp((1 - B - k) * inv, 0, 1),
+    k: clamp(k, 0, 1),
+  };
+}
+
+/**
+ * CMYK en [0,1] -> sRGB en [0,1], por la misma fórmula ingenua en sentido
+ * inverso: `r = (1 - C) * (1 - K)`.
+ *
+ * Es la inversa exacta de `rgbToCmyk`, así que el round trip cierra salvo por
+ * el redondeo a dos decimales del formateador, igual que el resto de la lib.
+ */
+export function cmykToRgb(
+  c: number,
+  m: number,
+  y: number,
+  k: number,
+): [number, number, number] {
+  const C = clamp(c, 0, 1);
+  const M = clamp(m, 0, 1);
+  const Y = clamp(y, 0, 1);
+  const K = clamp(k, 0, 1);
+  const w = 1 - K;
+  return [clamp((1 - C) * w, 0, 1), clamp((1 - M) * w, 0, 1), clamp((1 - Y) * w, 0, 1)];
+}
