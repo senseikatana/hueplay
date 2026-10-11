@@ -5,16 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2026-10-11
+
+Accessibility announcements, a real end-to-end suite, and the regression it immediately
+caught.
 
 ### Added
 
-- Contribution guidelines and repository-backed wiki pages covering development,
-  architecture, color math, deployment, and improvement proposals.
+- **End-to-end test suite** (`bun run test:e2e`). 31 checks driving a real browser over the
+  built site: dial drag, keyboard operation, URL restoration, numeric bounds, colour
+  pasting, the gamut badge, the `aria-live` regions and the field guide. Zero new
+  dependencies — the browser is driven over the DevTools Protocol using Node's built-in
+  `WebSocket`.
+  - It serves `dist/` with a small built-in static server rather than `astro preview`,
+    because in Astro 7 `preview` runs as a daemon and leaves a zombie process behind when
+    the run dies, which makes the result non-deterministic.
+  - The browser is resolved through `PATH` instead of hardcoded system paths, and can be
+    overridden with `CHROME_PATH`.
+- **Announcements for screen-reader users** (issues #4, #5 and #11), with three rules:
+  - Out-of-gamut is announced **only on transition**. Entering and leaving are spoken;
+    repeating the same state on every frame says nothing.
+  - The current colour is announced after a 400 ms debounce, so dragging a slider does not
+    produce one announcement per frame.
+  - Releasing a control, pressing an arrow key, or applying a colour announces
+    immediately, so keyboard users are not made to wait out the debounce.
+- **Contribution guidelines and a repository-backed wiki** covering development,
+  architecture, colour math, deployment and improvement proposals.
 
 ### Changed
 
 - Cleaned up the historical changelog formatting.
+
+### Fixed
+
+- **The out-of-gamut badge was inverted.** It was hidden exactly when the colour was out of
+  gamut, and shown when it was in gamut — introduced by a stray negation while adding the
+  announcements an hour earlier, and invisible to the unit suite because it only ever
+  asserted library behaviour. The end-to-end suite caught it on its first run, which is
+  the argument for having it.
 
 ## [0.3.0] - 2026-10-11
 

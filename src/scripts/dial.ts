@@ -79,6 +79,8 @@ const els = {
   inputError: byId("colorInputError"),
   apply: byId("applyColor"),
   copyStatus: byId("copyStatus"),
+  colorStatus: byId("colorStatus"),
+  gamutStatus: byId("gamutStatus"),
 };
 
 const value = (key: string): number => {
@@ -178,9 +180,48 @@ function syncHue(source: string): void {
   if (ok !== null) setRange("oklchHue", roundHue(ok));
 }
 
+// ------------------------------------------------------- anuncios accesibles
+//
+// Tres reglas, que son las que piden los issues #4/#5/#11:
+//
+//  1. El gamut se anuncia SÓLO al cambiar de estado. Entrar y salir se dicen una
+//     vez; repetir el mismo estado en cada frame no dice nada.
+//  2. El color se anuncia con retardo, para que arrastrar un slider no produzca
+//     un announcement por frame.
+//  3. Al soltar un control (change) o aplicar un color, el anuncio es inmediato:
+//     quien opera con teclado no espera un retardo para oír el resultado.
+
+let lastGamut: boolean | null = null;
+let colorTimer = 0;
+
+const announceGamut = (outOfGamut: boolean): void => {
+  if (outOfGamut === lastGamut) return;
+  lastGamut = outOfGamut;
+  els.gamutStatus.textContent = outOfGamut
+    ? "Atención: el color OKLCH actual está fuera del gamut de sRGB. El navegador va a mostrar un color con menos croma del que pediste."
+    : "El color OKLCH actual vuelve a estar dentro del gamut de sRGB.";
+};
+
+const describeColor = (): string => {
+  const hex = els.chipHex.textContent ?? "";
+  const oklch = els.chipOklch.textContent ?? "";
+  return `Color ${hex}, equivalente oklch ${oklch}.`;
+};
+
+const announceColor = (immediate: boolean): void => {
+  window.clearTimeout(colorTimer);
+  if (immediate) {
+    els.colorStatus.textContent = describeColor();
+    return;
+  }
+  colorTimer = window.setTimeout(() => {
+    els.colorStatus.textContent = describeColor();
+  }, 400);
+};
+
 // ----------------------------------------------------------------------- UI
 
-function updateUI(source: string): void {
+function updateUI(source: string, immediate = false): void {
   syncHue(source);
 
   const hslH = value("hslHue");
@@ -215,12 +256,16 @@ function updateUI(source: string): void {
   els.hslCode.textContent = hslColor;
   els.oklchCode.textContent = oklchColor;
 
-  els.oklchGamut.hidden = inSrgbGamut(ol / 100, okChroma, okH);
+  const outOfGamut = !inSrgbGamut(ol / 100, okChroma, okH);
+  // `hidden` es lo contrario de "fuera de gamut": dentro de gamut -> oculta.
+  els.oklchGamut.hidden = !outOfGamut;
+  announceGamut(outOfGamut);
 
   els.chipHex.textContent = formatHex(hslRgb[0], hslRgb[1], hslRgb[2]);
   els.chipHsl.textContent = formatHsl(hslRgb[0], hslRgb[1], hslRgb[2]);
   els.chipOklch.textContent = formatOklch(hslRgb[0], hslRgb[1], hslRgb[2]);
 
+  announceColor(immediate);
   scheduleUrlWrite();
 }
 
@@ -230,12 +275,18 @@ function updateUI(source: string): void {
  */
 let pendingFrame = 0;
 let pendingSource = "init";
-const scheduleUpdate = (source: string): void => {
+let pendingImmediate = false;
+const scheduleUpdate = (source: string, immediate = false): void => {
   pendingSource = source;
+  // Si en el mismo frame llegó un evento discreto, gana ése: hay que oír el
+  // resultado de soltar el control, no el último frame del arrastre.
+  pendingImmediate = pendingImmediate || immediate;
   if (pendingFrame) return;
   pendingFrame = requestAnimationFrame(() => {
     pendingFrame = 0;
-    updateUI(pendingSource);
+    const immediateNow = pendingImmediate;
+    pendingImmediate = false;
+    updateUI(pendingSource, immediateNow);
   });
 };
 
@@ -305,7 +356,7 @@ function applyColor(
   setRange("oklchChroma", clamp(Math.round((t.c / CHROMA_UNIT) * 100), 0, 100));
   setRange("oklchLight", clamp(Math.round(t.l * 100), 0, 100));
 
-  updateUI("apply");
+  updateUI("apply", true);
 }
 
 function applyFromInput(): void {
@@ -437,6 +488,9 @@ const endDrag = (event: PointerEvent): void => {
   if (activePointerId !== event.pointerId) return;
   activePointerId = null;
   dialRect = null;
+  // Soltar es un evento discreto: se anuncia el color final de inmediato, sin
+  // esperar el retardo de arrastre.
+  scheduleUpdate("hslHue", true);
 };
 els.dial.addEventListener("pointerup", endDrag);
 els.dial.addEventListener("pointercancel", endDrag);
@@ -478,13 +532,18 @@ els.dial.addEventListener("keydown", (event) => {
 
   event.preventDefault();
   setRange("hslHue", roundHue(next));
-  scheduleUpdate("hslHue");
+  // Cada pulsación de tecla es un evento discreto que el usuario cuenta, así
+  // que se anuncia sin retardo.
+  scheduleUpdate("hslHue", true);
 });
 
 // ------------------------------------------------------- sliders y numéricos
 
 for (const f of FIELDS) {
+  // `input` es continuo (arrastre) → pasa por el retardo.
   f.range.addEventListener("input", () => scheduleUpdate(f.key));
+  // `change` dispara al soltar el thumb: es el cierre, y se anuncia ya.
+  f.range.addEventListener("change", () => scheduleUpdate(f.key, true));
 
   f.num.addEventListener("input", () => {
     const raw = f.num.value.trim();
@@ -514,7 +573,8 @@ for (const f of FIELDS) {
     f.num.value = String(fixed);
     f.num.setAttribute("aria-invalid", "false");
     setRange(f.key, fixed);
-    scheduleUpdate(f.key);
+    // `change` dispara al soltar o al hacer blur: es el cierre de la edición.
+    scheduleUpdate(f.key, true);
   });
 }
 
@@ -535,4 +595,4 @@ paintHueTracks();
 readUrl();
 // "apply" y no "init": re-derivar el tono OKLCH desde el panel HSL pisaba el
 // `oklchHue` que venía en la URL, y una URL compartida no reproducía el color.
-updateUI("apply");
+updateUI("apply", true);
