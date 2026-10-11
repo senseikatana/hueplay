@@ -1,0 +1,27 @@
+{
+  "name": "hueplay",
+  "version": "0.2.0",
+  "description": "OKLCH vs HSL colour dial — served at senseikatana.com/hueplay/*",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "bash scripts/build.sh",
+    "deploy": "wrangler deploy",
+    "test": "bun test",
+    "prepare": "husky"
+  },
+  "author": "Sergio Jurado",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "wrangler": "^4.147.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,md,yml,yaml,css,scss,html}": [
+      "prettier --write"
+    ]
+  }
+}
