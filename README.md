@@ -210,6 +210,8 @@ Places that answer adjacent questions well:
 You only need [Bun](https://bun.sh):
 
 ```bash
+git clone https://github.com/senseikatana/hueplay.git
+cd hueplay
 bun install
 bun run dev      # http://localhost:4321/hueplay/
 ```
