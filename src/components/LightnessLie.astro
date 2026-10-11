@@ -1,0 +1,181 @@
+---
+/**
+ * "La mentira de la luminosidad".
+ *
+ * Dos filas de muestras, todas declarando la MISMA luminosidad. La de arriba
+ * en HSL, la de abajo en OKLCH. El botón repinta cada muestra como el gris que
+ * tu ojo realmente lee, y ahí se cae la mentira: los grises de HSL se dispersan,
+ * los de OKLCH coinciden con el número.
+ *
+ * La croma de la fila OKLCH es una sola para los doce tonos, ajustada al 90% del
+ * mínimo de croma máxima entre todos ellos a esa luz. Así las doce muestras
+ * caben en sRGB. Si alguna se saliera, el gamut mapping le bajaría la croma y
+ * la fila se vería desvaída por un motivo que no tiene nada que ver con lo que
+ * el demo enseña.
+ */
+---
+
+<section class="lie-demo" aria-labelledby="lieTitle">
+  <h2 id="lieTitle">La mentira de la luminosidad</h2>
+  <p>
+    Todas las muestras de abajo declaran la misma luminosidad. En HSL no la tienen: la
+    de un amarillo al 50% es un destello y la de un azul al 50% es un crepúsculo. En
+    OKLCH sí. Movés la luz y las dos filas se comportan de forma distinta — hasta que
+    las pintás de gris.
+  </p>
+
+  <div class="lie-toolbar">
+    <label for="lieLightness">Luz declarada</label>
+    <input
+      type="range"
+      id="lieLightness"
+      min="10"
+      max="90"
+      step="1"
+      value="50"
+      aria-describedby="lieVerdict"
+    />
+    <output id="lieLightnessOut" for="lieLightness">
+      50%
+    </output>
+    <button type="button" class="toggle-btn" id="lieGreysToggle" aria-pressed="false">
+      Ver como gris
+    </button>
+  </div>
+
+  <div class="lie-rows">
+    <div class="lie-row" id="lieRowHsl" style="--steps: 12"></div>
+    <div class="lie-row" id="lieRowOklch" style="--steps: 12"></div>
+  </div>
+
+  <p class="lie-verdict" id="lieVerdict" role="status" aria-live="polite"></p>
+
+  <p class="lie-note">
+    Las dos filas no tienen la misma croma, y no se puede igualar: a 50% de luz,
+    <code>hsl(…, 90%, 50%)</code> tiene una croma media de 0.237, y el valor más alto de
+    croma OKLCH que entra en sRGB para los doce tonos es 0.086. La fila OKLCH usa ese
+    máximo. No es un detalle menor:{" "}
+    <strong>la mentira de HSL crece con la saturación</strong> — a 22% la dispersión es
+    de 15 puntos, a 90% es de 49. Si querés comparar sólo la luminosidad, activá
+    <em>Ver como gris</em>: ahí la croma desaparece y las dos filas quedan reducidas a
+    su luminosidad real, que es lo único que las diferencia.
+  </p>
+</section>
+
+<script>
+  import {
+    hslToRgb,
+    maxSrgbChroma,
+    oklchToRgb,
+    rgbToOklabLightness,
+  } from "../lib/color";
+
+  const STEPS = 12;
+  const HUES = Array.from({ length: STEPS }, (_, i) => (i * 360) / STEPS);
+
+  const lightnessInput = document.getElementById("lieLightness") as HTMLInputElement;
+  const lightnessOut = document.getElementById("lieLightnessOut") as HTMLOutputElement;
+  const toggle = document.getElementById("lieGreysToggle") as HTMLButtonElement;
+  const verdict = document.getElementById("lieVerdict") as HTMLParagraphElement;
+  const rowHsl = document.getElementById("lieRowHsl") as HTMLDivElement;
+  const rowOklch = document.getElementById("lieRowOklch") as HTMLDivElement;
+
+  /** Sube el valor declarado en URL: ?lie=70 abre la demo en 70%. */
+  const initial = new URLSearchParams(location.search).get("lie");
+  if (initial !== null && /^\d{1,3}$/.test(initial)) {
+    const n = Number(initial);
+    if (n >= 10 && n <= 90) lightnessInput.value = String(n);
+  }
+
+  let showGreys = false;
+
+  const readRgb = (el: HTMLElement): number[] =>
+    (el.dataset.rgb ?? "").split(" ").map(Number);
+
+  /** Luminosidad perceptual OKLab del color pedido, en porcentaje. */
+  const perceivedPct = (el: HTMLElement): number => {
+    const [r = 0, g = 0, b = 0] = readRgb(el);
+    return rgbToOklabLightness(r, g, b) * 100;
+  };
+
+  const paint = (el: HTMLElement): void => {
+    const [r = 0, g = 0, b = 0] = readRgb(el);
+    el.style.backgroundColor = showGreys
+      ? `oklch(${perceivedPct(el).toFixed(1)}% 0 0)`
+      : `rgb(${Math.round(r * 255)} ${Math.round(g * 255)} ${Math.round(b * 255)})`;
+  };
+
+  const makeCell = (hue: number, rgb: readonly number[]): HTMLButtonElement => {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "lie-swatch";
+    el.dataset.rgb = rgb.map((v) => v.toFixed(6)).join(" ");
+
+    const p = perceivedPct(el);
+    el.setAttribute(
+      "aria-label",
+      `Tono ${Math.round(hue)} grados, luminosidad real ${p.toFixed(1)} por ciento`,
+    );
+    el.title = `${Math.round(hue)}° · ojo ${p.toFixed(1)}%`;
+
+    const caption = document.createElement("span");
+    caption.textContent = `${Math.round(hue)}°`;
+    el.append(caption);
+    return el;
+  };
+
+  const spread = (cells: HTMLElement[]): number => {
+    const ls = cells.map(perceivedPct);
+    return Math.max(...ls) - Math.min(...ls);
+  };
+
+  const buildRow = (row: HTMLDivElement, label: string, cells: HTMLElement[]): void => {
+    const heading = document.createElement("div");
+    heading.className = "lie-row-label";
+    heading.textContent = label;
+    row.replaceChildren(heading, ...cells);
+    for (const c of cells) paint(c);
+  };
+
+  const render = (): void => {
+    const L = Number(lightnessInput.value) / 100;
+    lightnessOut.value = `${lightnessInput.value}%`;
+
+    // Una sola croma para los doce tonos: la más alta que entre en sRGB en el
+    // tono MÁS restrictivo de la fila, con un margen del 10%.
+    const chroma = Math.min(...HUES.map((h) => maxSrgbChroma(L, 0.4, h))) * 0.9;
+
+    const hslCells = HUES.map((h) => makeCell(h, hslToRgb(h, 90, L * 100)));
+    const oklchCells = HUES.map((h) => makeCell(h, oklchToRgb(L, chroma, h)));
+
+    buildRow(rowHsl, "HSL", hslCells);
+    buildRow(rowOklch, "OKLCH", oklchCells);
+
+    const hSpread = spread(hslCells);
+    const oSpread = spread(oklchCells);
+    const hLs = hslCells.map(perceivedPct);
+    const oLs = oklchCells.map(perceivedPct);
+
+    verdict.innerHTML =
+      `A <strong>${(L * 100).toFixed(0)}%</strong> declarado, la fila HSL ` +
+      `se dispersa <strong>${hSpread.toFixed(1)} puntos</strong> de luminosidad ` +
+      `real (de ${Math.min(...hLs).toFixed(1)}% a ${Math.max(...hLs).toFixed(1)}%), ` +
+      `mientras la fila OKLCH se queda en <strong>${oSpread.toFixed(1)}</strong> ` +
+      `(de ${Math.min(...oLs).toFixed(1)}% a ${Math.max(...oLs).toFixed(1)}%).`;
+  };
+
+  lightnessInput.addEventListener("input", render);
+
+  toggle.addEventListener("click", () => {
+    showGreys = !showGreys;
+    toggle.setAttribute("aria-pressed", String(showGreys));
+    toggle.textContent = showGreys ? "Ver en color" : "Ver como gris";
+    for (const row of [rowHsl, rowOklch]) {
+      for (const cell of row.querySelectorAll<HTMLElement>(".lie-swatch")) {
+        paint(cell);
+      }
+    }
+  });
+
+  render();
+</script>

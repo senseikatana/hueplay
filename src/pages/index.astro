@@ -1,0 +1,108 @@
+---
+import Base from "../layouts/Base.astro";
+import ColorInput from "../components/ColorInput.astro";
+import Dial from "../components/Dial.astro";
+import LightnessLie from "../components/LightnessLie.astro";
+import Panel from "../components/Panel.astro";
+---
+
+<Base
+  title="Color Compass — Playground HSL vs OKLCH"
+  description="Comparación interactiva de los modelos de color HSL y OKLCH: dial de doble anillo, mapeo de tono real en ambas direcciones, conversiones exactas y aviso de gamut. HSL, hex y oklch()."
+>
+  <h1>
+    Playground <span>HSL</span> vs <span>OKLCH</span>
+  </h1>
+
+  <nav class="site-nav">
+    <a href="./">Playground</a>
+    <span aria-hidden="true">·</span>
+    <a href="./historia/">Los modelos de color</a>
+  </nav>
+
+  <ColorInput />
+
+  <Dial />
+
+  <div class="panels-grid">
+    <Panel
+      model="hsl"
+      title="HSL"
+      code="hsl(0, 65%, 50%)"
+      badge={false}
+      fields={[
+        {
+          key: "hslHue",
+          labelId: "hslHueLabel",
+          label: "Tono (Hue)",
+          min: 0,
+          max: 360,
+          unit: "°",
+          value: 0,
+          gradient: true,
+        },
+        {
+          key: "hslSat",
+          labelId: "hslSatLabel",
+          label: "Saturación",
+          min: 0,
+          max: 100,
+          unit: "%",
+          value: 65,
+        },
+        {
+          key: "hslLight",
+          labelId: "hslLightLabel",
+          label: "Luz",
+          min: 0,
+          max: 100,
+          unit: "%",
+          value: 50,
+        },
+      ]}
+    />
+
+    <Panel
+      model="oklch"
+      title="OKLCH"
+      code="oklch(50% 65% 29)"
+      badge={true}
+      fields={[
+        {
+          key: "oklchHue",
+          labelId: "oklchHueLabel",
+          label: "Tono (Hue)",
+          min: 0,
+          max: 360,
+          unit: "°",
+          value: 29,
+          gradient: true,
+        },
+        {
+          key: "oklchChroma",
+          labelId: "oklchChromaLabel",
+          label: "Croma",
+          min: 0,
+          max: 100,
+          unit: "%",
+          value: 65,
+        },
+        {
+          key: "oklchLight",
+          labelId: "oklchLightLabel",
+          label: "Luz",
+          min: 0,
+          max: 100,
+          unit: "%",
+          value: 50,
+        },
+      ]}
+    />
+  </div>
+
+  <LightnessLie />
+</Base>
+
+<script>
+  import "../scripts/dial";
+</script>
