@@ -19,8 +19,10 @@ const offline = process.argv.includes("--offline");
 
 const problems = [];
 const checks = [];
+const notes = [];
 
 const ok = (name, detail = "") => checks.push({ name, detail, ok: true });
+const warn = (name, detail = "") => checks.push({ name, detail, ok: "warn" });
 const bad = (name, detail) => {
   checks.push({ name, detail, ok: false });
   problems.push(`${name}${detail ? ` — ${detail}` : ""}`);
@@ -122,18 +124,30 @@ if (tags.includes(pkgVersion)) {
   );
 }
 
-// 5. main no debería tener commits sin liberar por encima del tag
-const mainSha = safeGit("rev-parse", "origin/main");
+// 5. Una ref por encima del último tag es NORMAL entre releases, no un error:
+//    lo anómalo es que eso no esté registrado en [Unreleased].
+//
+// La ref es configurable para poder revisar una rama antes de mergearla:
+//   RELEASE_REF=origin/dev bun run release:check
+const REF = process.env.RELEASE_REF ?? "origin/main";
+const refSha = safeGit("rev-parse", REF);
 const tagSha = tags.length > 0 ? safeGit("rev-list", "-n", "1", `v${tags[0]}`) : null;
-if (mainSha && tagSha) {
-  if (mainSha === tagSha) {
-    ok("main está en el tag más reciente", `v${tags[0]}`);
+if (refSha && tagSha) {
+  if (refSha === tagSha) {
+    ok(`${REF} está en el tag más reciente`, `v${tags[0]}`);
   } else {
-    const ahead = safeGit("rev-list", "--count", `v${tags[0]}..origin/main`);
-    bad(
-      "main está en el tag más reciente",
-      `main está ${ahead} commit(s) por delante de v${tags[0]}`,
-    );
+    const ahead = Number(safeGit("rev-list", "--count", `v${tags[0]}..${REF}`));
+    if (changelog.includes("## [Unreleased]")) {
+      warn(
+        `${REF} está en el tag más reciente`,
+        `${ahead} commit(s) sin publicar, ya registrados en [Unreleased]`,
+      );
+    } else {
+      bad(
+        `${REF} está en el tag más reciente`,
+        `${ahead} commit(s) por encima de v${tags[0]} y NO hay sección [Unreleased] que los registre`,
+      );
+    }
   }
 }
 
@@ -167,11 +181,20 @@ if (offline) {
 // ------------------------------------------------------------------ informe
 
 const pad = Math.max(...checks.map((c) => c.name.length));
+const mark = { true: "✓", false: "✗", warn: "!" };
 console.log("");
 for (const c of checks) {
-  console.log(`  ${c.ok ? "✓" : "✗"} ${c.name.padEnd(pad)}  ${c.detail}`);
+  const m = mark[String(c.ok)];
+  console.log(`  ${m} ${c.name.padEnd(pad)}  ${c.detail}`);
+  if (c.ok === "warn") notes.push(`${c.name} — ${c.detail}`);
 }
 console.log("");
+
+if (notes.length > 0) {
+  console.log(`  ${notes.length} aviso(s), no bloquean:\n`);
+  for (const n of notes) console.log(`    • ${n}`);
+  console.log("");
+}
 
 if (problems.length > 0) {
   console.error(`  ${problems.length} problema(s) de sincronización:\n`);

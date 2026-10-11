@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`bun run release:check`** — verifies that `package.json`, this changelog, the git tags
+  and the GitHub releases agree, and that `main` is not above the newest tag without an
+  `[Unreleased]` section recording it. The changelog drifted once already (a `0.3.1`
+  section with no tag and no release, then a `0.3.2` re-listing the same commits), and
+  nothing in the build noticed. The check is verified to fail against that exact drift.
+- **`bun run release:sync`** — pushes each changelog section onto its GitHub release.
+  `gh release create` writes an auto-generated commit list, which is not a changelog;
+  the changelog is the source of truth and each release is a projection of it.
+
+### Fixed
+
+- The `0.3.2` changelog entry was a machine-generated commit list that repeated a block
+  verbatim, re-listed content already shipped in the `0.3.0` tag, and duplicated a
+  phantom `0.3.1`. It is now a real entry, and all three releases were re-synced from it.
+- `main` sitting above the newest tag is normal between releases; the check reports it
+  as a warning rather than an error, and only fails when unreleased commits are not
+  recorded anywhere.
+
 ## [0.3.2] - 2026-10-11
 
 Accessible announcements, a real end-to-end suite, contribution docs — and the three
