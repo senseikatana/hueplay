@@ -472,6 +472,43 @@ input[type="range"]::-moz-range-thumb {
   color: #3ad07a;
 }
 
+/* device-cmyk(): se ve deliberadamente distinto de los otros chips. Trazo
+   discontinuo y texto atenuado, para que se lea como "referencia, no paint".
+   Si se viera igual que oklch(), alguien lo copiaría esperando que funcione. */
+.chip-text {
+  border-style: dashed;
+  opacity: 0.85;
+}
+.chip-text:hover {
+  opacity: 1;
+}
+.chip-text .chip-key {
+  color: #b98a3d;
+}
+.chip-text code {
+  color: #d9a441;
+}
+.chip-text.copied {
+  border-color: #3ad07a;
+  border-style: solid;
+}
+.chip-text.copied .chip-key {
+  color: #3ad07a;
+}
+
+.input-note-cmyk {
+  border-left: 3px solid #b98a3d;
+  padding-left: 0.75rem;
+  max-width: 78ch;
+}
+.input-note-cmyk strong {
+  color: #d9a441;
+}
+.input-note-cmyk em {
+  font-style: italic;
+  color: var(--fg);
+}
+
 .panel-heading {
   display: flex;
   align-items: center;

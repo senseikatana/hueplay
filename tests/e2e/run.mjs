@@ -400,6 +400,48 @@ async function main() {
     `${badInput.before} vs ${badInput.after}`,
   );
 
+  // device-cmyk(): el chip tiene que existir, actualizarse con el color, y NO
+  // pintarse. Ese último punto es el que importa: si alguien le pone
+  // `background: device-cmyk(...)` un día, el rectángulo queda vacío porque
+  // ningún navegador implementa la función.
+  const cmyk = await evaluate(`(async () => { ${settle}
+    const inp = document.getElementById('colorInput');
+    inp.value = '#ffd000'; document.getElementById('applyColor').click(); await wait();
+    const chip = document.getElementById('chipCmyk');
+    return {
+      text: document.getElementById('chipCmykValue').textContent,
+      bg: getComputedStyle(chip).backgroundColor,
+      border: getComputedStyle(chip).borderTopStyle,
+    };
+  })()`);
+  check(
+    "el chip device-cmyk() muestra la tupla de tinta del color en pantalla",
+    /^device-cmyk\(\d+% \d+% \d+% \d+%\)$/.test(cmyk.text),
+    cmyk.text,
+  );
+  // Lo que hay que probar NO es "el fondo es transparente" —el chip hereda el
+  // #0a0a0a de `.chip`, como todos— sino que el fondo no sea el color CMYK.
+  // El borde discontinuo es la marca visual de "esto es texto".
+  check(
+    "el chip device-cmyk() no se pinta con el color y se marca como texto",
+    cmyk.bg !== "rgb(255, 0, 0)" && cmyk.border === "dashed",
+    `fondo=${cmyk.bg} borde=${cmyk.border}`,
+  );
+
+  // Y que la entrada funcione de verdad en el otro sentido: pegar CMYK tiene que
+  // mover el dial, no dar error.
+  const cmykIn = await evaluate(`(async () => { ${settle}
+    const inp = document.getElementById('colorInput');
+    inp.value = 'device-cmyk(0% 100% 100% 0%)'; document.getElementById('applyColor').click(); await wait();
+    return { field: inp.value, hex: document.getElementById('chipHex').textContent,
+             err: document.getElementById('colorInputError').textContent };
+  })()`);
+  check(
+    "pegar device-cmyk() mueve el dial al rojo y no da error",
+    cmykIn.hex === "#ff0000" && cmykIn.err === "",
+    `${cmykIn.hex} err="${cmykIn.err}"`,
+  );
+
   for (const [label, value, shouldLight] of [
     ["oklch(50% 100% 30)", "oklch(50% 100% 30)", true],
     ["#ff0000 (rojo puro, no es falsa alarma)", "#ff0000", false],

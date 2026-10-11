@@ -9,6 +9,7 @@
 import {
   CHROMA_UNIT,
   clamp,
+  formatDeviceCmyk,
   formatHex,
   formatHsl,
   formatOklch,
@@ -74,6 +75,7 @@ const els = {
   chipHex: byId("chipHex"),
   chipHsl: byId("chipHsl"),
   chipOklch: byId("chipOklch"),
+  chipCmykValue: byId("chipCmykValue"),
   chips: byId("outputChips"),
   input: byId<HTMLInputElement>("colorInput"),
   inputError: byId("colorInputError"),
@@ -268,6 +270,9 @@ function updateUI(source: string, immediate = false): void {
   els.chipHex.textContent = formatHex(hslRgb[0], hslRgb[1], hslRgb[2]);
   els.chipHsl.textContent = formatHsl(hslRgb[0], hslRgb[1], hslRgb[2]);
   els.chipOklch.textContent = formatOklch(hslRgb[0], hslRgb[1], hslRgb[2]);
+  // device-cmyk() es TEXTO y sólo texto: ningún navegador la implementa, así
+  // que no se pinta. Va como referencia para cuando exista. Ver `convert.ts`.
+  els.chipCmykValue.textContent = formatDeviceCmyk(hslRgb[0], hslRgb[1], hslRgb[2]);
 
   announceColor(immediate);
   scheduleUrlWrite();
