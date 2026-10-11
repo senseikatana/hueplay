@@ -2,6 +2,7 @@
 title: Por qué los ejes de tono no coinciden
 description: La equivalencia HSL→OKLCH es una conversión real, no una tabla. Y depende de la saturación y la luz.
 order: 2
+year: 2020
 ---
 
 La pregunta que trae todo el mundo: _si el rojo es 0° en HSL, ¿qué es en
