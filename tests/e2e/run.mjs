@@ -78,7 +78,24 @@ function startServer() {
     createReadStream(file).pipe(res);
   });
 
-  return new Promise((done) => server.listen(PORT, "127.0.0.1", () => done(server)));
+  return new Promise((done, fail) => {
+    // `listen` no propaga el error al promise: dispara el evento `error` de
+    // forma asíncrona. Sin este manejador, un puerto ocupado revienta el
+    // proceso con un stack trace en vez de decir qué hacer al respecto.
+    server.once("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        fail(
+          new Error(
+            `el puerto ${PORT} está ocupado. Si hay un preview corriendo, ` +
+              `paralo con \`bunx astro preview stop\`; si no, liberá el puerto.`,
+          ),
+        );
+      } else {
+        fail(err);
+      }
+    });
+    server.listen(PORT, "127.0.0.1", () => done(server));
+  });
 }
 
 /** El ejecutable se resuelve por PATH, no hardcodeando rutas del sistema. */
@@ -232,6 +249,28 @@ async function main() {
   };
 
   await send("Runtime.enable");
+
+  /**
+   * Antes de checkear nada, confirmar que la página se sirvió entera. Si
+   * `dist/` se está reconstruyendo en paralelo, `astro build` vacía el
+   * directorio y el servidor responde 404 o HTML a medias; sin esto el primer
+   * check falla con `Cannot read properties of null`, que no dice nada sobre la
+   * causa real.
+   */
+  await goto(BASE);
+  const loaded = await evaluate(`(() => ({
+    title: document.title,
+    dial: !!document.getElementById('dialWrapper'),
+    chips: !!document.getElementById('chipHex'),
+    swatches: document.querySelectorAll('.lie-swatch').length,
+  }))()`);
+  if (!loaded.dial || !loaded.chips || loaded.swatches === 0) {
+    throw new Error(
+      `la página se sirvió incompleta (título "${loaded.title}", ` +
+        `dial=${loaded.dial}, chips=${loaded.chips}, muestras=${loaded.swatches}). ` +
+        `Suele significar que dist/ se está reconstruyendo en paralelo.`,
+    );
+  }
 
   const num = (id) => `document.getElementById('${id}Num').value`;
   /** Avanza dos frames: el rAF del dial necesita uno para agrupar y otro para aplicar. */

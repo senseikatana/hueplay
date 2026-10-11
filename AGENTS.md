@@ -58,12 +58,12 @@ Deployed as a Cloudflare Worker with Static Assets on `https://senseikatana.com/
 ```bash
 bun install      # once
 bun run dev      # astro dev      -> http://localhost:4321/hueplay/
-bun run build    # astro build    -> dist/
-bun run preview  # serve the build
-bun run deploy   # astro build && wrangler deploy
-bun test         # colour maths + worker routing
-bun run test:e2e # build + real browser (needs Chrome/Chromium on PATH)
-bun run check    # astro check (types)
+bun run verify   # types + unit tests, stops at the first failure
+bun run build    # verify -> build -> end-to-end suite
+bun run preview  # build (fully gated) -> serve it
+bun run deploy   # build (fully gated) -> Cloudflare
+bun test         # unit only
+bun run test:e2e # end-to-end only; needs a prior build
 bun run release       # check -> sync -> check, in one command
 bun run release:check # version <-> CHANGELOG <-> tags <-> releases
 bun run release:sync  # push the CHANGELOG section onto each GitHub release
