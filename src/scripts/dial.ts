@@ -126,12 +126,16 @@ function paintRings(s: number, l: number, c: number, ol: number): void {
         : v,
   );
 
+  // `hues` tiene 7 entradas: seis primarios más el rojo repetido ya desplazado
+  // más allá de 360. El bucle tiene que ir hasta `length - 1` para pintar el
+  // sector azul -> magenta; con `length - 2` ese tramo queda sin pintar.
   const stops: string[] = [];
-  for (let i = 0; i < hues.length - 2; i++) {
+  for (let i = 0; i < hues.length - 1; i++) {
     const from = i === 0 ? 0 : (hues[i - 1] as number);
     const at = hues[i] as number;
     stops.push(`oklch(${ol}% ${c}% ${round2(at)}) ${round2(from)}deg ${round2(at)}deg`);
   }
+  // El tramo final cierra el círculo en 360° y se pinta con el tono del rojo.
   const last = (hues[hues.length - 2] as number) ?? 0;
   stops.push(
     `oklch(${ol}% ${c}% ${round2(hues[0] as number)}) ${round2(last)}deg 360deg`,
@@ -495,12 +499,17 @@ const endDrag = (event: PointerEvent): void => {
 els.dial.addEventListener("pointerup", endDrag);
 els.dial.addEventListener("pointercancel", endDrag);
 
-// El dial se redimensiona con la ventana, así que el rect cacheado caduca.
-const invalidateRect = (): void => {
-  dialRect = null;
+// El dial se redimensiona con la ventana y se mueve con el scroll, así que el
+// rect cacheado caduca. Invalidarlo a secas rompía el arrastre en curso: con
+// `dialRect` en null, `handleDrag` salía temprano y el dial dejaba de responder
+// hasta soltar y volver a pulsar. Ahora se vuelve a medir, que es barato y sólo
+// pasa en resize/scroll.
+const remeasure = (): void => {
+  if (activePointerId === null) dialRect = null;
+  else dialRect = els.dial.getBoundingClientRect();
 };
-window.addEventListener("resize", invalidateRect);
-window.addEventListener("scroll", invalidateRect, { passive: true });
+window.addEventListener("resize", remeasure);
+window.addEventListener("scroll", remeasure, { passive: true });
 
 /**
  * Teclado. El dial es el control principal de la herramienta y sin esto quien no

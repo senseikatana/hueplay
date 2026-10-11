@@ -506,6 +506,59 @@ async function main() {
   );
   check("el toggle se marca presionado", demo.pressed === "true");
 
+  // 9b. El anillo OKLCH no puede tener huecos (#19)
+  //
+  // El navegador expande cada stop de color a un PAR de posiciones
+  // (`color Xdeg, color Ydeg`), así que los ángulos vienen de dos en dos:
+  // los pares impares son los inicios de sector y los pares, los finales.
+  // Un sector sin pintar es un `end` que no coincide con el `start` siguiente.
+  const ring = await evaluate(`(() => {
+    const bg = getComputedStyle(document.getElementById('oklchRing')).backgroundImage;
+    const angles = [...bg.matchAll(/([0-9.]+)deg/g)].map(m => Number(m[1]));
+    const starts = angles.filter((_, i) => i % 2 === 0);
+    const ends = angles.filter((_, i) => i % 2 === 1);
+    const gaps = [];
+    for (let i = 0; i < starts.length - 1; i++) {
+      if (Math.abs(ends[i] - starts[i + 1]) > 0.01) {
+        gaps.push(ends[i] + '->' + starts[i + 1]);
+      }
+    }
+    return { sectors: starts.length, gaps, first: starts[0], last: ends[ends.length - 1] };
+  })()`);
+  check(
+    "el anillo OKLCH cubre los 360 grados sin huecos",
+    ring.gaps.length === 0 && ring.first === 0 && ring.last === 360,
+    `sectores=${ring.sectors} huecos=${ring.gaps.join(",") || "ninguno"} primero=${ring.first} último=${ring.last}`,
+  );
+
+  // 9c. El arrastre sobrevive a un scroll en curso (#18)
+  const drag = await evaluate(`(async () => { ${settle}
+    const dial = document.getElementById('dialWrapper');
+    const r = dial.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const fire = (type, x, y) => dial.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+
+    fire('pointerdown', cx + r.width / 2, cy); await wait();
+    const before = document.getElementById('hslHueNum').value;
+
+    // Scroll en pleno arrastre: el rect cacheado queda obsoleto.
+    window.scrollBy(0, 40);
+    window.dispatchEvent(new Event('scroll'));
+    fire('pointermove', cx, cy + r.height / 2); await wait();
+    const afterScroll = document.getElementById('hslHueNum').value;
+
+    fire('pointermove', cx, cy - r.height / 2); await wait();
+    const after = document.getElementById('hslHueNum').value;
+    fire('pointerup', cx, cy - r.height / 2);
+    return { before, afterScroll, after };
+  })()`);
+  check(
+    "el arrastre sigue respondiendo después de un scroll en curso",
+    drag.afterScroll !== drag.before && drag.after !== drag.afterScroll,
+    JSON.stringify(drag),
+  );
+
   // 10. La guía de campo
   await goto(`${BASE}historia/`);
   const docs = await evaluate(`({

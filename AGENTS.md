@@ -135,7 +135,7 @@ correct; there are tests pinning both values. Do not "fix" it.
 1. `bun test` — 71 tests, ~37k assertions. Anything touching `src/lib/color` must leave
    it green.
 2. `bun run check` — zero type errors.
-3. `bun run test:e2e` — 31 checks in a real browser. This is the one that catches assembled-
+3. `bun run test:e2e` — 33 checks in a real browser. This is the one that catches assembled-
    page bugs the unit suite cannot see: it has already caught an inverted gamut badge.
 4. `bun run dev` and load `http://localhost:4321/hueplay/`.
 5. Drag the dial: the pointer, both hue sliders, both swatches and both code strings
