@@ -1,6 +1,6 @@
 {
   "name": "hueplay",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Color Compass — HSL vs OKLCH playground and colour-model field guide, served at senseikatana.com/hueplay/*",
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "deploy": "astro build && wrangler deploy",
     "test": "bun test",
+    "test:e2e": "bun run build && node tests/e2e/run.mjs",
     "check": "astro check",
     "prepare": "husky"
   },

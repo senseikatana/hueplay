@@ -50,6 +50,7 @@ Deployed as a Cloudflare Worker with Static Assets on `https://senseikatana.com/
 | `worker.js`                | Edge router for `/hueplay/*`                                            |
 | `tests/color.test.ts`      | Conversions, parser, round trips, gamut semantics                       |
 | `tests/worker.test.ts`     | Routing, security headers, traversal, redirect allow-list               |
+| `tests/e2e/run.mjs`        | Browser checks over the built site: drag, keyboard, URL, `aria-live`    |
 | `dist/`                    | Build output (git-ignored), served as assets                            |
 
 ## Commands
@@ -61,11 +62,18 @@ bun run build    # astro build    -> dist/
 bun run preview  # serve the build
 bun run deploy   # astro build && wrangler deploy
 bun test         # colour maths + worker routing
+bun run test:e2e # build + real browser (needs Chrome/Chromium on PATH)
 bun run check    # astro check (types)
 ```
 
 `astro dev` serves on **4321**, not 8787. The `base: "/hueplay"` means the dev URL is
 `http://localhost:4321/hueplay/`.
+
+`bun run test:e2e` is separate from `bun test` on purpose: it needs a build, a server and
+a real DOM. It serves `dist/` with a small built-in static server rather than
+`astro preview`, because in Astro 7 `preview` runs as a daemon and leaves a zombie
+process behind if the test dies, which makes the run non-deterministic. Set
+`CHROME_PATH` if the browser is not on `PATH`.
 
 ## Code conventions
 
@@ -127,30 +135,32 @@ correct; there are tests pinning both values. Do not "fix" it.
 1. `bun test` — 71 tests, ~37k assertions. Anything touching `src/lib/color` must leave
    it green.
 2. `bun run check` — zero type errors.
-3. `bun run dev` and load `http://localhost:4321/hueplay/`.
-4. Drag the dial: the pointer, both hue sliders, both swatches and both code strings
+3. `bun run test:e2e` — 33 checks in a real browser. This is the one that catches assembled-
+   page bugs the unit suite cannot see: it has already caught an inverted gamut badge.
+4. `bun run dev` and load `http://localhost:4321/hueplay/`.
+5. Drag the dial: the pointer, both hue sliders, both swatches and both code strings
    move together.
-5. Round trip: set an HSL hue, note the OKLCH hue, drag the OKLCH hue slider back onto
+6. Round trip: set an HSL hue, note the OKLCH hue, drag the OKLCH hue slider back onto
    that number — the HSL hue returns to where it started.
-6. Move HSL saturation: the OKLCH hue re-derives. It is derived from the colour, not
+7. Move HSL saturation: the OKLCH hue re-derives. It is derived from the colour, not
    copied.
-7. Set HSL saturation to 0%: nothing breaks, and the OKLCH hue **freezes at its last
+8. Set HSL saturation to 0%: nothing breaks, and the OKLCH hue **freezes at its last
    value** — it does not reset to 0.
-8. Paste `#ffd000`: the field normalises to `#ffd000`, the chips read
+9. Paste `#ffd000`: the field normalises to `#ffd000`, the chips read
    `oklch(87.35% 44.68% 92.34)`. Paste garbage: an inline error appears and the state is
    untouched. Paste `oklch(50% 100% 30)`: the panel keeps those numbers and the
    **Fuera de Gamut** badge lights up. Paste `lch(…)`: rejected inline.
-9. Paste `#ff0000`: the badge must **stay dark**. This is the regression test for the
-   ΔE predicate.
-10. Type into a numeric field: the slider and the other panel follow. Type `999`: the
+10. Paste `#ff0000`: the badge must **stay dark**. This is the regression test for the
+    ΔE predicate.
+11. Type into a numeric field: the slider and the other panel follow. Type `999`: the
     field gets `aria-invalid="true"` and nothing moves until blur, then it clamps.
-11. Keyboard: `Tab` reaches the input, the button, the chips, every slider **and the
+12. Keyboard: `Tab` reaches the input, the button, the chips, every slider **and the
     dial**. Focus the dial and press arrows / `Shift`+arrows / `Home` / `End`.
-12. Share a URL with all six params, reload, and confirm all six are restored — including
+13. Share a URL with all six params, reload, and confirm all six are restored — including
     `oklchHue`, which is easy to clobber by re-deriving it.
-13. Open `/hueplay/historia/`: four documents render, the timeline cards link to working
+14. Open `/hueplay/historia/`: four documents render, the timeline cards link to working
     anchors, and tables/code blocks are styled.
-14. Open `/hueplay/historia` **without the trailing slash** and follow the redirect. It
+15. Open `/hueplay/historia` **without the trailing slash** and follow the redirect. It
     must land on `/hueplay/historia/` and return 200. This is the one that regressed:
     `auto-trailing-slash` composes its `Location` from the site root, which does not
     know about `base: "/hueplay"`, so the worker has to re-apply the prefix. If you

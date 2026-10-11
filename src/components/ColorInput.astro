@@ -46,7 +46,16 @@
     </button>
   </div>
 
-  <!-- Sin `hidden`: el aviso tiene que poder anunciarse aunque se vacíe. -->
+  <!-- Región de anuncio para el color actual. Se escribe con retardo, así que
+       arrastrar un slider no produce un announcement por frame. -->
+  <p class="sr-only" role="status" aria-live="polite" id="colorStatus"></p>
+
+  <!-- Región separada y SÓLO para el gamut. Se escribe únicamente cuando el
+       estado booleano cambia, nunca en cada actualización: entrar y salir se
+       anuncian, repetir el mismo estado no. -->
+  <p class="sr-only" role="status" aria-live="polite" id="gamutStatus"></p>
+
+  <!-- Aviso de copiado. -->
   <p class="sr-only" role="status" aria-live="polite" id="copyStatus"></p>
 
   <p class="input-note" id="colorInputNote">
