@@ -158,6 +158,50 @@ describe("montaje de rutas", () => {
     expect(new URL(seen[0]!.url).pathname).toBe("/historia/");
   });
 
+  // Con `html_handling: "auto-trailing-slash"` el binding responde 307 hacia
+  // `/historia/`, pero compone el Location desde la raíz del SITIO, que no
+  // sabe del prefijo `/hueplay`. Sin reponer el prefijo, `/hueplay/historia`
+  // (sin slash) caía en un 404 y la guía de campo era inalcanzable para
+  // cualquier link escrito a mano sin slash final.
+  test("repone /hueplay en el redirect de trailing-slash", async () => {
+    const { env } = makeEnv({
+      "/historia/": "<!doctype html><title>historia</title>",
+    });
+    env.ASSETS.fetch = async () =>
+      new Response(null, {
+        status: 307,
+        headers: { location: "/historia/" },
+      });
+
+    const res = await call(`${PRODUCTION}/hueplay/historia`, undefined, env);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("/hueplay/historia/");
+  });
+
+  test("no repone el prefijo si el Location ya lo trae", async () => {
+    const { env } = makeEnv();
+    env.ASSETS.fetch = async () =>
+      new Response(null, {
+        status: 307,
+        headers: { location: "/hueplay/otra/" },
+      });
+
+    const res = await call(`${PRODUCTION}/hueplay/otra`, undefined, env);
+    expect(res.headers.get("location")).toBe("/hueplay/otra/");
+  });
+
+  test("no toca un Location absoluto (no es del binding)", async () => {
+    const { env } = makeEnv();
+    env.ASSETS.fetch = async () =>
+      new Response(null, {
+        status: 307,
+        headers: { location: "https://otro.example/x" },
+      });
+
+    const res = await call(`${PRODUCTION}/hueplay/x`, undefined, env);
+    expect(res.headers.get("location")).toBe("https://otro.example/x");
+  });
+
   test("no hay fallback de SPA: una ruta desconocida da 404 real", async () => {
     const res = await call(`${PRODUCTION}/hueplay/nope`);
     expect(res.status).toBe(404);
@@ -182,6 +226,31 @@ describe("traversal", () => {
     const res = await call(`${PRODUCTION}/hueplay/%E0%A4%A`);
     expect(res.status).toBe(404);
     assertSecure(res, "percent inválido");
+  });
+
+  // El chequeo explícito de `..` se puede evadir con doble encoding
+  // (`%252e%252e%252f` decodifica una vez a `%2e%2e%2f`, que no contiene
+  // `..` literal). La segunda capa —normalizar la ruta a través de `URL`— es
+  // la que garantiza que al binding nunca le llega un segmento de recorrido.
+  test("el doble encoding no alcanza el binding", async () => {
+    const attempts = [
+      "/hueplay/%252e%252e%252f%252e%252e%252fetc%252fpasswd",
+      "/hueplay/a/%252e%252e/%252e%252e/etc/passwd",
+      "/hueplay/%252e%252e%252findex.html",
+    ];
+    for (const p of attempts) {
+      const { env, seen } = makeEnv();
+      await call(`${PRODUCTION}${p}`, undefined, env);
+      // Lo que se envió al binding no debe contener segmentos de recorrido.
+      const target = seen.length > 0 ? new URL(seen[0]!.url).pathname : "/";
+      expect(target, `binding recibió traversal en ${p}`).not.toContain("..");
+    }
+  });
+
+  test("una ruta normal no se altera al normalizar", async () => {
+    const { env, seen } = makeEnv();
+    await call(`${PRODUCTION}/hueplay/historia/`, undefined, env);
+    expect(new URL(seen[0]!.url).pathname).toBe("/historia/");
   });
 
   test("no puede escapar a otro host por //", async () => {
