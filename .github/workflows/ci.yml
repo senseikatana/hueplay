@@ -1,0 +1,52 @@
+# Verificación en cada pull request.
+#
+# Cubre tipos y tests unitarios. NO corre la suite de navegador: el issue #20 la
+# deja explícitamente afuera hasta que el runner esté estable, y `bun run build`
+# sí la incluye, así que este workflow llama a las piezas por separado para no
+# duplicar ese trabajo ni depender de Chromium en el runner.
+#
+# El despliegue es de otro flujo a propósito: este workflow no publica nunca.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# Cancela ejecuciones anteriores de la misma rama: si alguien empuja dos veces,
+# sólo importa la última.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Lectura y nada más. Ningún secret, ninguna escritura, deploy imposible.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # La versión queda pineada. Sin esto, `bun install` puede resolver contra
+      # un Bun más nuevo y fallar por el motor, no por el proyecto.
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+
+      # --frozen-lockfile falla si bun.lock cambia. Es lo que hace que CI no
+      # pueda pasar con un lockfile fuera de fecha que nadie commiteó.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run check
+
+      - name: Unit tests
+        run: bun test
