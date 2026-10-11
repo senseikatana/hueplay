@@ -224,6 +224,7 @@ bun run dev      # http://localhost:4321/hueplay/
 | `bun run deploy`  | Build and deploy to Cloudflare Workers |
 | `bun test`        | Colour maths and worker routing        |
 | `bun run check`   | Type checking                          |
+
 Project structure, the invariants that must not change and the manual verification
 checklist live in [`AGENTS.md`](AGENTS.md).
 
