@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-11
+
+Highlights: feat: device-cmyk() as input and as reference text, never as a colour (#25), plus 1 more change.
+
+- [x] 🚀 feat: device-cmyk() as input and as reference text, never as a colour (#25)
+  - `src/components/ColorInput.astro`
+  - `src/scripts/dial.ts`
+  - `src/styles/global.css`
+  - `tests/e2e/run.mjs`
+- [x] 🔹 Correct README clone and setup commands (#14)
+  - `README.md`
+- [x] 🚀 feat: add CMYK and MDN colours features
+- [x] 📝 docs: record the broken navigation in the changelog
+- [x] 🐛 fix: the whole navigation on the history page pointed nowhere
+- [x] 🧹 chore: nine scripts instead of twelve
+
 ## [0.3.4] - 2026-10-11
 
 Highlights: feat: add CMYK and MDN colours features and fix: the whole navigation on the history page pointed nowhere, plus 4 more changes.
