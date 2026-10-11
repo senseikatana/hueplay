@@ -5,42 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`bun run release:check`** — verifies that `package.json`, this changelog, the git tags
+  and the GitHub releases agree, and that `main` is not above the newest tag without an
+  `[Unreleased]` section recording it. The changelog drifted once already (a `0.3.1`
+  section with no tag and no release, then a `0.3.2` re-listing the same commits), and
+  nothing in the build noticed. The check is verified to fail against that exact drift.
+- **`bun run release:sync`** — pushes each changelog section onto its GitHub release.
+  `gh release create` writes an auto-generated commit list, which is not a changelog;
+  the changelog is the source of truth and each release is a projection of it.
+
+### Fixed
+
+- The `0.3.2` changelog entry was a machine-generated commit list that repeated a block
+  verbatim, re-listed content already shipped in the `0.3.0` tag, and duplicated a
+  phantom `0.3.1`. It is now a real entry, and all three releases were re-synced from it.
+- `main` sitting above the newest tag is normal between releases; the check reports it
+  as a warning rather than an error, and only fails when unreleased commits are not
+  recorded anywhere.
+
 ## [0.3.2] - 2026-10-11
 
-Highlights: feat: announce colour and gamut state to screen readers and fix: repaint the OKLCH ring's missing sector and survive scroll mid-drag, plus 2 more changes.
+Accessible announcements, a real end-to-end suite, contribution docs — and the three
+regressions that suite caught on its first run.
 
-- [x] 🐛 fix: repaint the OKLCH ring's missing sector and survive scroll mid-drag
-  - `AGENTS.md`
-  - `src/scripts/dial.ts`
-  - `tests/e2e/run.mjs`
-- [x] 🚀 feat: announce colour and gamut state to screen readers
-  - `AGENTS.md`
-  - `package.json`
-  - `src/components/ColorInput.astro`
-  - `src/scripts/dial.ts`
-  - `tests/e2e/run.mjs`
-- [x] 📝 docs: add contribution guide and project wiki (#17)
-  - `CONTRIBUTING.md`
-  - `wiki/Architecture.md`
-  - `wiki/Color-Math.md`
-  - `wiki/Deployment.md`
-  - `wiki/Development.md`
-  - `wiki/Home.md`
-  - `wiki/Improvement-Proposals.md`
-- [x] 📝 docs: add contribution guide and project wiki
-  - `CONTRIBUTING.md`
-  - `wiki/Architecture.md`
-  - `wiki/Color-Math.md`
-  - `wiki/Deployment.md`
-  - `wiki/Development.md`
-  - `wiki/Home.md`
-  - `wiki/Improvement-Proposals.md`
-- [x] 🐛 fix: make the field guide reachable without a trailing slash (#16)
-- [x] 🔹 dev (#15)
-
-## [0.3.1] - 2026-10-11
-
-Accessibility announcements, a real end-to-end suite, and three regressions it caught.
+> This release absorbs what an intermediate `0.3.1` section briefly described. That
+> version was never tagged and never shipped; everything in it is here.
 
 ### Added
 
@@ -64,27 +57,27 @@ Accessibility announcements, a real end-to-end suite, and three regressions it c
 - **Contribution guidelines and a repository-backed wiki** covering development,
   architecture, colour math, deployment and improvement proposals.
 
+### Fixed
+
+All three were introduced during the Astro migration, and none was visible to the unit
+suite — they only assert library behaviour, never the assembled page.
+
+- **The out-of-gamut badge was inverted.** It was hidden exactly when the colour was out
+  of gamut, and shown when it was in gamut — a stray negation while wiring up the
+  announcements. The end-to-end suite caught it on its first run.
+- **The OKLCH ring had an unpainted sector** (issue #19). The blue-to-magenta sector,
+  264.1° to 328.4° — 64.3 degrees — was never drawn, so the inner wheel showed a hole
+  where magenta should begin. The loop bound went from `length - 1` to `length - 2` while
+  cleaning up `paintRings`; the original was correct.
+- **Dragging died if the page scrolled mid-drag** (issue #18). The cached dial rect was
+  nulled on scroll, and with it null the drag handler bailed out, so the dial stopped
+  responding until you released and pressed again. It re-measures now, which only happens
+  on resize or scroll.
+
 ### Changed
 
 - Cleaned up the historical changelog formatting.
-
-### Fixed
-
-- **The out-of-gamut badge was inverted.** It was hidden exactly when the colour was out of
-  gamut, and shown when it was in gamut — introduced by a stray negation while adding the
-  announcements, and invisible to the unit suite because it only ever asserted library
-  behaviour. The end-to-end suite caught it on its first run, which is the argument for
-  having it.
-- **The OKLCH ring had an unpainted sector** (issue #19). The blue-to-magenta sector,
-  264.1° to 328.4° — 64.3 degrees — was never drawn, so the inner wheel showed a hole where
-  magenta should begin. Introduced during the migration when the loop bound went from
-  `length - 1` to `length - 2`; the original was correct. The end-to-end suite now asserts
-  the ring tiles 360° with no gaps, and that assertion was verified to fail against the
-  broken stop sequence before being trusted.
-- **Dragging died if the page scrolled mid-drag** (issue #18). The cached dial rect was
-  nulled on scroll, and with it null the drag handler bailed out, so the dial stopped
-  responding until you released and pressed again. It now re-measures instead, which is
-  cheap and only happens on resize or scroll.
+- `bun audit` is clean across 383 packages; the new dependencies are all dev-only.
 
 ## [0.3.0] - 2026-10-11
 

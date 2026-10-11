@@ -64,6 +64,8 @@ bun run deploy   # astro build && wrangler deploy
 bun test         # colour maths + worker routing
 bun run test:e2e # build + real browser (needs Chrome/Chromium on PATH)
 bun run check    # astro check (types)
+bun run release:check # version <-> CHANGELOG <-> tags <-> releases
+bun run release:sync  # push the CHANGELOG section onto each GitHub release
 ```
 
 `astro dev` serves on **4321**, not 8787. The `base: "/hueplay"` means the dev URL is
@@ -74,6 +76,25 @@ a real DOM. It serves `dist/` with a small built-in static server rather than
 `astro preview`, because in Astro 7 `preview` runs as a daemon and leaves a zombie
 process behind if the test dies, which makes the run non-deterministic. Set
 `CHROME_PATH` if the browser is not on `PATH`.
+
+## Releasing
+
+The **CHANGELOG is the source of truth**; each GitHub release is a projection of its
+matching section. That invariant has already broken once — a `0.3.1` section existed
+with no tag and no release, and `0.3.2` then re-listed the same commits — so the
+drift is checked, not remembered:
+
+1. Edit `CHANGELOG.md`, and bump `package.json` in the same commit. Every version in
+   the CHANGELOG needs a tag, or the section is a phantom.
+2. `bun run release:check` — fails if `package.json`, the CHANGELOG, the tags and the
+   GitHub releases disagree, or if `main` has commits above the newest tag.
+3. Merge to `main`, tag, then `bun run release:sync` to push each section onto its
+   release. `gh release create` writes an auto-generated commit list by default, which
+   is not a changelog — `sync` overwrites it with the real text.
+
+`0.1.0` and `0.2.0` predate the available git history and cannot be tagged; they are
+listed as `UNTAGGED_BY_DESIGN` in `scripts/check-release.mjs` so the rule keeps its
+teeth for everything that comes after.
 
 ## Code conventions
 
