@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Automated PR checks** (#20). `.github/workflows/ci.yml` runs `bun run check`
+  and `bun test` on every pull request and on pushes to `main` and `dev`. Bun is
+  pinned to `1.4.3` and dependencies install with `--frozen-lockfile`, so a stale
+  lockfile fails the run instead of silently passing. Permissions are
+  `contents: read`: the workflow cannot write, and it never deploys.
+
+  It deliberately does **not** run the browser suite. #20 asked for that to wait
+  until the runner work is stable, and `bun run build` already covers it locally;
+  duplicating it in CI would add a Chromium dependency for no new signal. The
+  workflow calls `check` and `test` separately for exactly that reason.
+
+### Fixed
+
+- **`CONTRIBUTING.md` and `README.md` documented two scripts that no longer
+  exist.** Both listed `bun run preview` and `bun run deploy`, renamed to
+  `build:preview` and `build:deploy` when the build became a gate. Anyone
+  following the onboarding steps hit a missing script.
+
+### Verified, no code change
+
+- **Clone instructions** (#1, #9). Followed end to end from a fresh clone rather
+  than reading them: `git clone`, `bun install --frozen-lockfile`, `bun test`
+  (86 pass), `bun run check` (0 errors), and `bun run dev` answering 200 on
+  `http://localhost:4321/hueplay/` and `/hueplay/historia/`. The mount path and
+  the documented URL were both correct already.
+
 ## [0.4.0] - 2026-10-11
 
 Highlights: feat: device-cmyk() as input and as reference text, never as a colour (#25), plus 1 more change.

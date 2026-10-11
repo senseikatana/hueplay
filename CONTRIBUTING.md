@@ -31,14 +31,21 @@ The local app is available at `http://localhost:4321/hueplay/`.
 
 Useful commands:
 
-| Command           | Purpose                                       |
-| ----------------- | --------------------------------------------- |
-| `bun test`        | Run the color-math and Worker assertions.     |
-| `bun run check`   | Check Astro and TypeScript types.             |
-| `bun run build`   | Build the static app with Astro into `dist/`. |
-| `bun run dev`     | Run the app locally through Astro.            |
-| `bun run preview` | Preview the built static app.                 |
-| `bun run deploy`  | Build and deploy the Cloudflare Worker.       |
+| Command                 | Purpose                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `bun run dev`           | Dev server with HMR. No gate -- you want fast reloads while working.                     |
+| `bun test`              | Unit tests: colour maths, parser and Worker routing.                                     |
+| `bun run check`         | Astro and TypeScript types.                                                              |
+| `bun run e2e`           | Browser suite. Needs a prior `bun run build`.                                            |
+| `bun run build`         | **The gate.** Types -> unit tests -> build -> browser suite. Stops at the first failure. |
+| `bun run build:preview` | `build`, then serve it.                                                                  |
+| `bun run build:deploy`  | `build`, then publish to Cloudflare.                                                     |
+| `bun run release`       | Check the changelog against tags and releases, sync, check again.                        |
+
+There is no `bun run preview` or `bun run deploy`; both were renamed to sit
+under `build:` so that anything serving or shipping goes through the gate.
+Anything that serves or publishes runs the full gate first, so neither can
+ship something unverified.
 
 ## Project constraints
 

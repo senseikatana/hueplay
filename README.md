@@ -216,14 +216,19 @@ bun install
 bun run dev      # http://localhost:4321/hueplay/
 ```
 
-| Command           | What it does                           |
-| ----------------- | -------------------------------------- |
-| `bun run dev`     | Astro dev server with HMR              |
-| `bun run build`   | Static build into `dist/`              |
-| `bun run preview` | Serve the production build locally     |
-| `bun run deploy`  | Build and deploy to Cloudflare Workers |
-| `bun test`        | Colour maths and worker routing        |
-| `bun run check`   | Type checking                          |
+| Command                 | What it does                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `bun run dev`           | Dev server with HMR. No gate, so reloads stay fast while you work.                          |
+| `bun run build`         | **The gate.** Types -> unit tests -> build -> browser suite, stopping at the first failure. |
+| `bun run build:preview` | Runs the gate, then serves the result locally.                                              |
+| `bun run build:deploy`  | Runs the gate, then publishes to Cloudflare.                                                |
+| `bun test`              | Unit tests only: colour maths, parser, Worker routing.                                      |
+| `bun run e2e`           | Browser suite only. Needs a prior `bun run build`.                                          |
+| `bun run check`         | Astro and TypeScript types.                                                                 |
+| `bun run release`       | Reconcile the changelog against tags and releases, sync, then check again.                  |
+
+`build:preview` and `build:deploy` both go through `build`, so nothing can be served or
+published without the whole gate passing first.
 
 Project structure, the invariants that must not change and the manual verification
 checklist live in [`AGENTS.md`](AGENTS.md).
