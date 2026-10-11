@@ -10,6 +10,7 @@
     "deploy": "astro build && wrangler deploy",
     "test": "bun test",
     "test:e2e": "bun run build && node tests/e2e/run.mjs",
+    "release": "node scripts/release.mjs",
     "release:check": "node scripts/check-release.mjs",
     "release:sync": "node scripts/sync-release.mjs",
     "check": "astro check",
