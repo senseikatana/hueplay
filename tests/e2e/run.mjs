@@ -3,7 +3,7 @@
  * End-to-end checks against a real browser.
  *
  * These are NOT part of `bun test`: they need a built site, a server and a real
- * DOM, so they run separately via `bun run test:e2e`. The value they add over
+ * DOM, so they run separately via `bun run e2e`. The value they add over
  * the unit suite is that they exercise the assembled page — Pointer Events,
  * `aria-live`, URL state, and the Astro build output — none of which the pure
  * colour library can see.
@@ -11,7 +11,7 @@
  * Zero dependencies: the browser is driven over the DevTools Protocol using
  * Node's built-in WebSocket, and the site is served by `astro preview`.
  *
- *   bun run build && bun run test:e2e
+ *   bun run build
  */
 
 import { spawn, spawnSync } from "node:child_process";
@@ -618,6 +618,61 @@ async function main() {
   check(
     "todos los enlaces de la cronología resuelven a un id real",
     docs.anchors === true,
+  );
+
+  // 11. Los enlaces cruzados se piden de verdad, no se resuelven a ojo.
+  //
+  // El bug que esto cubre: un `./historia/` es relativo al *directorio
+  // actual*, así que desde `/hueplay/historia/` pedía `/hueplay/historia/
+  // historia/` y daba 404, y un `./` pedía la propia página. Un test que sólo
+  // mira si el fragmento existe no ve ninguno de los dos fallos, porque ambos
+  // enlaces tienen un href perfectamente bien formado.
+  const crossLinks = await evaluate(`(async () => {
+    const seen = [];
+    for (const page of ['${BASE}', '${BASE}historia/']) {
+      const html = await (await fetch(page)).text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      for (const a of doc.querySelectorAll('a[href]')) {
+        const url = new URL(a.getAttribute('href'), new URL(page, location.origin));
+        if (url.origin !== location.origin) continue;
+        seen.push({
+          from: new URL(page, location.origin).href,
+          href: a.getAttribute('href'),
+          path: url.pathname,
+          url: url.href,
+          // La nav marca la página actual con aria-current, y un enlace a
+          // uno mismo ahí es intencional. Lo que se busca es el "./" que
+          // apunta a la propia página *por accidente*, sin marcar.
+          current: a.hasAttribute('aria-current'),
+        });
+      }
+    }
+    const out = [];
+    for (const l of seen) {
+      const res = await fetch(l.path);
+      out.push({ ...l, status: res.status });
+    }
+    return out;
+  })()`);
+
+  const broken = crossLinks.filter((l) => l.status !== 200);
+  check(
+    "todos los enlaces cruzados responden 200",
+    broken.length === 0,
+    broken.map((l) => `${l.path} (${l.status}) desde ${l.from}`).join(" | "),
+  );
+
+  // Un enlace a la propia página sólo tiene sentido si es un fragmento puro
+  // (`#03-croma`): los de la cronología son legítimamente auto-enlaces. Un
+  // `./` en la navegación, en cambio, es un enlace a la propia página que
+  // documentado, no lleva a ninguna parte útil.
+  const selfLinks = crossLinks.filter(
+    (l) => !l.href.startsWith("#") && !l.current && l.url === l.from,
+  );
+  check(
+    "ningún enlace de navegación apunta a la propia página",
+    selfLinks.length === 0,
+    selfLinks.map((l) => `${l.from} -> ${l.href}`).join(" | "),
   );
 
   check(

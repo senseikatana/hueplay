@@ -4,6 +4,14 @@ import Base from "../layouts/Base.astro";
 
 // Orden estable por el campo `order` del frontmatter, no por nombre de archivo.
 const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
+
+// Rutas absolutas desde la raíz del sitio, con el prefijo ya aplicado.
+// Un `./` es relativo al *directorio actual*, así que desde
+// `/hueplay/historia/` resuelve a la propia página, y `./historia/` resuelve a
+// `/hueplay/historia/historia/`. BASE_URL vale `/hueplay/`, que sí es estable.
+const base = import.meta.env.BASE_URL;
+const playground = base;
+const historia = `${base}historia/`;
 ---
 
 <Base
@@ -11,9 +19,9 @@ const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.
   description="Por qué los ejes de tono de HSL y OKLCH no coinciden: la historia de los modelos de color desde Munsell (1905) hasta CSS Color 4, con el mapeo de tono, la trampa del 100% de croma y el gamut mapping."
 >
   <nav class="site-nav">
-    <a href="./">Playground</a>
+    <a href={playground}>Playground</a>
     <span aria-hidden="true">·</span>
-    <a href="./historia/" aria-current="page">
+    <a href={historia} aria-current="page">
       Los modelos de color
     </a>
   </nav>
@@ -51,7 +59,7 @@ const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.
   </div>
 
   <div class="doc-nav">
-    <a href="./">← Volver al playground</a>
-    <a href="./historia/#03-croma">Trampa de la croma →</a>
+    <a href={playground}>← Volver al playground</a>
+    <a href={`${historia}#03-croma`}>Trampa de la croma →</a>
   </div>
 </Base>
