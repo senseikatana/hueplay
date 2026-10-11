@@ -185,14 +185,14 @@ No installation required to try it — just open `index.html` in your browser.
 For development and deployment you only need [Bun](https://bun.sh):
 
 ```bash
-git clone https://github.com/senseikatana/senseikatana.git
-cd senseikatana/colour-wheel-playground
+git clone https://github.com/senseikatana/hueplay.git
+cd hueplay
 bun install
 ```
 
 | Command          | What it does                                               |
 | ---------------- | ---------------------------------------------------------- |
-| `bun run dev`    | Local server via `wrangler dev` at `http://localhost:8787` |
+| `bun run dev`    | Local server via `wrangler dev` at `http://localhost:8787/hueplay/` |
 | `bun run build`  | Copies the static files into `dist/`                       |
 | `bun run deploy` | Builds and deploys to Cloudflare Workers                   |
 | `bun test`       | Runs the color-math test suite in `tests/`                 |
