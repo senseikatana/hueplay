@@ -7,12 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-10-11
 
-Accessibility announcements, a real end-to-end suite, and the regression it immediately
-caught.
+Accessibility announcements, a real end-to-end suite, and three regressions it caught.
 
 ### Added
 
-- **End-to-end test suite** (`bun run test:e2e`). 31 checks driving a real browser over the
+- **End-to-end test suite** (`bun run test:e2e`). 33 checks driving a real browser over the
   built site: dial drag, keyboard operation, URL restoration, numeric bounds, colour
   pasting, the gamut badge, the `aria-live` regions and the field guide. Zero new
   dependencies — the browser is driven over the DevTools Protocol using Node's built-in
@@ -40,9 +39,19 @@ caught.
 
 - **The out-of-gamut badge was inverted.** It was hidden exactly when the colour was out of
   gamut, and shown when it was in gamut — introduced by a stray negation while adding the
-  announcements an hour earlier, and invisible to the unit suite because it only ever
-  asserted library behaviour. The end-to-end suite caught it on its first run, which is
-  the argument for having it.
+  announcements, and invisible to the unit suite because it only ever asserted library
+  behaviour. The end-to-end suite caught it on its first run, which is the argument for
+  having it.
+- **The OKLCH ring had an unpainted sector** (issue #19). The blue-to-magenta sector,
+  264.1° to 328.4° — 64.3 degrees — was never drawn, so the inner wheel showed a hole where
+  magenta should begin. Introduced during the migration when the loop bound went from
+  `length - 1` to `length - 2`; the original was correct. The end-to-end suite now asserts
+  the ring tiles 360° with no gaps, and that assertion was verified to fail against the
+  broken stop sequence before being trusted.
+- **Dragging died if the page scrolled mid-drag** (issue #18). The cached dial rect was
+  nulled on scroll, and with it null the drag handler bailed out, so the dial stopped
+  responding until you released and pressed again. It now re-measures instead, which is
+  cheap and only happens on resize or scroll.
 
 ## [0.3.0] - 2026-10-11
 
