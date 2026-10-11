@@ -5,78 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.1] - 2026-10-11
 
-### Added
+Highlights: feat: cyberpunk theme, and fix the horizontal overflow it exposed (#28), plus 1 more change.
 
-- **Automated PR checks** (#20). `.github/workflows/ci.yml` runs `bun run check`
-  and `bun test` on every pull request and on pushes to `main` and `dev`. Bun is
-  pinned to `1.4.3` and dependencies install with `--frozen-lockfile`, so a stale
-  lockfile fails the run instead of silently passing. Permissions are
-  `contents: read`: the workflow cannot write, and it never deploys.
-
-  It deliberately does **not** run the browser suite. #20 asked for that to wait
-  until the runner work is stable, and `bun run build` already covers it locally;
-  duplicating it in CI would add a Chromium dependency for no new signal. The
-  workflow calls `check` and `test` separately for exactly that reason.
-
-### Fixed
-
-- **`CONTRIBUTING.md` and `README.md` documented two scripts that no longer
-  exist.** Both listed `bun run preview` and `bun run deploy`, renamed to
-  `build:preview` and `build:deploy` when the build became a gate. Anyone
-  following the onboarding steps hit a missing script.
-
-### Verified, no code change
-
-- **Clone instructions** (#1, #9). Followed end to end from a fresh clone rather
-  than reading them: `git clone`, `bun install --frozen-lockfile`, `bun test`
-  (86 pass), `bun run check` (0 errors), and `bun run dev` answering 200 on
-  `http://localhost:4321/hueplay/` and `/hueplay/historia/`. The mount path and
-  the documented URL were both correct already.
-
-## [Unreleased]
-
-### Added
-
-- **Cyberpunk theme across the whole site.** Near-black background with a two
-  layer blueprint grid, cyan and magenta accents, clipped corners on the panels,
-  glow on the dial and the range thumbs, monospace for every code surface and
-  heading. No new dependency: Tailwind is not in this project and `AGENTS.md`
-  forbids adding one without explicit approval, so it is plain CSS on the
-  existing token block.
-
-- **Three of the four timeline cards had no date.** `year` is optional in the
-  collection schema and the template renders a dash when it is missing, so three
-  of four entries showed "—". Filled in from verifiable dates: OKLab was
-  published in December 2020, CSS Color 4 landed in 2022.
-
-### Fixed
-
-- **The history page overflowed horizontally at narrow widths.** `.docs` is a
-  flex item in a flex column, and a flex item without an explicit `width` is
-  sized by its own content rather than by the container, so it measured 648px
-  inside a 423px container and pushed a 206px horizontal scrollbar across the
-  page. `width: 100%` is what fixes it; `min-width: 0` alone does not.
-
-  Worth recording because the obvious fix made it worse: `min-width: 0` and
-  `overflow-wrap: break-word` on `.docs *` both measured as no-ops, and
-  `overflow-wrap: break-word` is wrong here regardless -- it does not feed into
-  minimum-content sizing, so the box keeps measuring its longest word. The fix
-  is `anywhere` on the items that actually overflow, plus `width: 100%` on the
-  item itself.
-
-  Verified by measuring `scrollWidth` against `clientWidth` at 360, 390, 768 and
-  1440px on both pages: zero overflow everywhere.
-
-- **Card borders were nearly invisible.** `#1f2b40` on the panel background is
-  1.33:1. Borders are the structural element of this theme, so they moved to
-  `#31456b` (1.97:1). Every text colour was re-verified against each background
-  it sits on; the dial hub is the binding case because it is the only surface
-  where text and colour meet.
-
-- **`prefers-reduced-motion` did not cover the glows.** It froze transitions but
-  `box-shadow` still jumped on hover, which is movement too.
+- [x] 🚀 feat: cyberpunk theme, and fix the horizontal overflow it exposed (#28)
+  - `src/components/ColorInput.astro`
+  - `src/content/docs/02-mapeo-hue.md`
+  - `src/content/docs/03-croma.md`
+  - `src/content/docs/04-gamut.md`
+  - `src/pages/historia.astro`
+  - `src/styles/global.css`
+- [x] 🤖 ci: check every pull request, and fix docs listing dead scripts (#20) (#26)
+  - `.github/workflows/ci.yml`
+  - `CONTRIBUTING.md`
+  - `README.md`
+- [x] 🚀 feat: device-cmyk() as input and as reference text, never as a colour (#25)
+- [x] 🔹 Correct README clone and setup commands (#14)
+- [x] 🚀 feat: add CMYK and MDN colours features
+- [x] 📝 docs: record the broken navigation in the changelog
 
 ## [0.4.0] - 2026-10-11
 
