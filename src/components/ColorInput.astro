@@ -1,0 +1,57 @@
+---
+/**
+ * Entrada de color + chips de equivalencia exacta.
+ *
+ * Los chips muestran la conversión EXACTA del color del panel HSL (dos
+ * decimales); el código dentro de cada panel replica los valores de sus propios
+ * sliders, así que pueden diferir en un paso de redondeo. Está documentado a
+ * propósito.
+ */
+---
+
+<div class="input-bar">
+  <div class="input-row">
+    <label class="input-label" for="colorInput">
+      Pegar color
+    </label>
+    <input
+      type="text"
+      class="color-input"
+      id="colorInput"
+      spellcheck="false"
+      autocomplete="off"
+      autocapitalize="off"
+      placeholder="#ff0000 · hsl(49 100% 50%) · oklch(62.8% 64.42% 29.23)"
+      aria-describedby="colorInputNote"
+    />
+    <button type="button" class="apply-btn" id="applyColor">
+      Aplicar
+    </button>
+  </div>
+
+  <p class="input-error" id="colorInputError" role="alert"></p>
+
+  <div class="output-chips" id="outputChips">
+    <button type="button" class="chip" data-fmt="hex">
+      <span class="chip-key">#hex</span>
+      <code id="chipHex">#000000</code>
+    </button>
+    <button type="button" class="chip" data-fmt="hsl">
+      <span class="chip-key">hsl()</span>
+      <code id="chipHsl">hsl(0, 0%, 0%)</code>
+    </button>
+    <button type="button" class="chip" data-fmt="oklch">
+      <span class="chip-key">oklch()</span>
+      <code id="chipOklch">oklch(0% 0% 0)</code>
+    </button>
+  </div>
+
+  <!-- Sin `hidden`: el aviso tiene que poder anunciarse aunque se vacíe. -->
+  <p class="sr-only" role="status" aria-live="polite" id="copyStatus"></p>
+
+  <p class="input-note" id="colorInputNote">
+    Los chips equivalen al color del panel HSL. El alfa se ignora: la herramienta no
+    tiene canal alfa. CIE LCH se dejó fuera a propósito: es un espacio de impresión
+    (blanco D50) y en proyectos web no aporta.
+  </p>
+</div>

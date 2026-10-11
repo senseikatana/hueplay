@@ -1,0 +1,775 @@
+/* ==========================================================================
+   Color Compass — hoja global.
+
+   El dial, los paneles y la demo educativa comparten estos tokens. Todo color
+   de texto pasa AA (4.5:1) sobre su fondo: `--muted` da 4.61:1 sobre el hub
+   del dial (#222), que es el peor caso, así que sirve en los cuatro fondos sin
+   tener que auditar cada uno por separado.
+   ========================================================================== */
+
+:root {
+  --bg: #0f0f0f;
+  --panel-bg: #1a1a1a;
+  --fg: #f0f0f0;
+  --accent: #4af;
+  --track-bg: #333;
+
+  /* Texto secundario. Verificado ≥ 4.5:1 sobre #1a1a1a, #0f0f0f, #0a0a0a y
+     #222 (el caso límite, 4.61:1). El #888 anterior daba 4.49:1 sobre #222. */
+  --muted: #8a8a8a;
+
+  --radius: 16px;
+  --border: 1px solid #333;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  margin: 0;
+  /* clamp en vez de 2rem fijo: a 320px de viewport, 2rem de padding en los dos
+     lados dejaban 256px de contenido contra un dial de 250px — 6px de margen. */
+  padding: clamp(1rem, 4vw, 2rem);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+h1 {
+  text-align: center;
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+h1 span {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Visible sólo para lectores de pantalla. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ dial */
+
+.dial-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dial-wrapper {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.dial-wrapper:active {
+  cursor: grabbing;
+}
+/* El dial es el control principal y se opera con teclado: sin esto, quien no
+   puede arrastrar un puntero se queda sin la pieza central de la herramienta. */
+.dial-wrapper:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  /* Sin `transition: background`: el JS escribe un `conic-gradient` en
+     `background`, y las imágenes de fondo no son interpolables — saltaría a
+     mitad del intervalo en vez de funderse. */
+}
+.hsl-ring {
+  inset: 0;
+  -webkit-mask: radial-gradient(circle, transparent 68%, black 68%);
+  mask: radial-gradient(circle, transparent 68%, black 68%);
+  z-index: 1;
+}
+.ring-gap {
+  position: absolute;
+  inset: 40px;
+  background: var(--bg);
+  border-radius: 50%;
+  z-index: 2;
+}
+.oklch-ring {
+  inset: 50px;
+  -webkit-mask: radial-gradient(circle, transparent 55%, black 55%);
+  mask: radial-gradient(circle, transparent 55%, black 55%);
+  z-index: 3;
+}
+
+.ring-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 4;
+  pointer-events: none;
+}
+.label-hsl {
+  top: 8px;
+  color: #fff;
+}
+.label-oklch {
+  top: 58px;
+  color: #ddd;
+}
+
+.pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 100%;
+  transform-origin: center center;
+  transform: translateX(-50%) rotate(0deg);
+  pointer-events: none;
+  z-index: 10;
+}
+.pointer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 16px solid #fff;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+.pointer-line {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 2px;
+  height: 100%;
+  background: #fff;
+  transform: translateX(-50%);
+  opacity: 0.8;
+}
+
+.center-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: #222;
+  border: 2px solid #444;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+.center-hub small {
+  font-size: 0.6rem;
+  color: var(--muted);
+  font-weight: normal;
+}
+.dial-info {
+  text-align: center;
+  font-family: monospace;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------------- paneles */
+
+.panels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: var(--border);
+}
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: var(--border);
+  padding-bottom: 1rem;
+}
+.panel-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+}
+.panel-code {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+  background: #0a0a0a;
+  padding: 4px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+  text-align: right;
+}
+
+.color-display {
+  width: 100%;
+  height: 150px;
+  border-radius: 12px;
+  border: var(--border);
+  /* Acá SÍ funciona: el JS escribe `background-color`, que es interpolable. */
+  transition: background-color 0.05s linear;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.num-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.num-unit {
+  color: #fff;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+.num-input {
+  width: 4.6rem;
+  text-align: right;
+  background: #0a0a0a;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  -moz-appearance: textfield;
+}
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.num-input:hover {
+  border-color: #666;
+}
+.num-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Fuera de rango se marca en el campo, no se ignora en silencio. */
+.num-input[aria-invalid="true"] {
+  border-color: #ff8a8a;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--track-bg);
+  outline: none;
+  border: 1px solid #444;
+}
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: 3px solid var(--accent);
+}
+
+/* --------------------------------------------- entrada y chips de color */
+
+.input-bar {
+  background: var(--panel-bg);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.input-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.color-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  background: #0a0a0a;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+/* El placeholder NO es decorativo: ahí viven los ejemplos de sintaxis. Le
+   corresponde el umbral de 4.5:1, no el de 3:1 de texto grande. */
+.color-input::placeholder {
+  color: var(--muted);
+}
+.color-input:hover {
+  border-color: #666;
+}
+.color-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.apply-btn {
+  background: var(--accent);
+  color: #04121f;
+  border: none;
+  border-radius: 8px;
+  /* min-height 44px: objetivo táctil de la WCAG 2.2, no el mínimo de 24px. */
+  min-height: 44px;
+  padding: 0.5rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.apply-btn:hover {
+  filter: brightness(1.12);
+}
+.apply-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.input-error {
+  margin: 0;
+  color: #ff8a8a;
+  font-size: 0.8rem;
+}
+.input-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.output-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #0a0a0a;
+  border: var(--border);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.chip:hover {
+  border-color: var(--accent);
+}
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chip-key {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.chip code {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+.chip.copied {
+  border-color: #3ad07a;
+}
+.chip.copied .chip-key {
+  color: #3ad07a;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.gamut-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #3b1d1d;
+  color: #ff8a8a;
+  border: 1px solid #6b2f2f;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------- demo: la mentira de la luz */
+
+.lie-demo {
+  background: var(--panel-bg);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.lie-demo h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.lie-demo > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 70ch;
+}
+
+.lie-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.lie-toolbar label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.lie-toolbar input[type="range"] {
+  flex: 1 1 220px;
+}
+
+.toggle-btn {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid #444;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.toggle-btn:hover {
+  border-color: var(--accent);
+}
+.toggle-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.toggle-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lie-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.lie-row {
+  display: grid;
+  grid-template-columns: 9.5rem repeat(var(--steps, 12), 1fr);
+  gap: 2px;
+}
+.lie-row-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--muted);
+  padding-right: 0.5rem;
+}
+.lie-swatch {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: help;
+}
+.lie-swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lie-swatch > span {
+  position: absolute;
+  inset: auto 0 -1.15rem 0;
+  text-align: center;
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: var(--muted);
+}
+.lie-rows {
+  /* espacio para las etiquetas bajo los swatches */
+  padding-bottom: 1.25rem;
+}
+
+.lie-verdict {
+  font-size: 0.9rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+  color: var(--muted);
+}
+.lie-verdict strong {
+  color: var(--fg);
+}
+
+/* La nota metodológica: por qué las dos filas no tienen la misma croma. */
+.lie-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  max-width: 78ch;
+  line-height: 1.65;
+}
+.lie-note code {
+  font-family: monospace;
+  color: var(--fg);
+}
+.lie-note strong {
+  color: var(--fg);
+}
+
+/* ------------------------------------------------------------------ docs */
+
+.docs {
+  max-width: 75ch;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+.docs h1,
+.docs h2,
+.docs h3 {
+  line-height: 1.25;
+}
+.docs h1 {
+  text-align: left;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 2rem;
+}
+.docs h2 {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: var(--border);
+  font-size: 1.4rem;
+}
+.docs p,
+.docs li {
+  color: #ddd;
+}
+.docs table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.docs th,
+.docs td {
+  border: var(--border);
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+}
+.docs th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.docs code {
+  font-family: monospace;
+  background: #0a0a0a;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+.docs pre {
+  background: #0a0a0a;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: var(--border);
+}
+.docs pre code {
+  background: none;
+  padding: 0;
+  color: #ddd;
+}
+.docs blockquote {
+  margin: 1.5rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+}
+
+/* Anclas de la cronología: sin esto, saltar al id deja el título pegado al
+   borde superior del viewport. */
+.docs section {
+  scroll-margin-top: 1.5rem;
+}
+
+.doc-nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-top: var(--border);
+  padding-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* Cronología: la lista de documentos ordenada por año. */
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.timeline li {
+  background: var(--panel-bg);
+  border: var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+.timeline-year {
+  font-family: monospace;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+.timeline-title {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+.timeline-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.site-nav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .panels-grid {
+    grid-template-columns: 1fr;
+  }
+  .dial-wrapper {
+    width: min(250px, 78vw);
+    height: min(250px, 78vw);
+  }
+  .lie-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .lie-row-label {
+    padding-bottom: 0.25rem;
+  }
+  .lie-swatch {
+    aspect-ratio: auto;
+    height: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
