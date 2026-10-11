@@ -2,6 +2,7 @@
 title: La trampa del 100% de croma
 description: En oklch(), 100% de croma no es 1.0. Es 0.4. Y esa confusión te da colores 2.5× más saturados.
 order: 3
+year: 2022
 ---
 
 CSS Color 4 permite escribir la croma de `oklch()` como número **o** como

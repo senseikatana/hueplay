@@ -35,6 +35,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `http://localhost:4321/hueplay/` and `/hueplay/historia/`. The mount path and
   the documented URL were both correct already.
 
+## [Unreleased]
+
+### Added
+
+- **Cyberpunk theme across the whole site.** Near-black background with a two
+  layer blueprint grid, cyan and magenta accents, clipped corners on the panels,
+  glow on the dial and the range thumbs, monospace for every code surface and
+  heading. No new dependency: Tailwind is not in this project and `AGENTS.md`
+  forbids adding one without explicit approval, so it is plain CSS on the
+  existing token block.
+
+- **Three of the four timeline cards had no date.** `year` is optional in the
+  collection schema and the template renders a dash when it is missing, so three
+  of four entries showed "—". Filled in from verifiable dates: OKLab was
+  published in December 2020, CSS Color 4 landed in 2022.
+
+### Fixed
+
+- **The history page overflowed horizontally at narrow widths.** `.docs` is a
+  flex item in a flex column, and a flex item without an explicit `width` is
+  sized by its own content rather than by the container, so it measured 648px
+  inside a 423px container and pushed a 206px horizontal scrollbar across the
+  page. `width: 100%` is what fixes it; `min-width: 0` alone does not.
+
+  Worth recording because the obvious fix made it worse: `min-width: 0` and
+  `overflow-wrap: break-word` on `.docs *` both measured as no-ops, and
+  `overflow-wrap: break-word` is wrong here regardless -- it does not feed into
+  minimum-content sizing, so the box keeps measuring its longest word. The fix
+  is `anywhere` on the items that actually overflow, plus `width: 100%` on the
+  item itself.
+
+  Verified by measuring `scrollWidth` against `clientWidth` at 360, 390, 768 and
+  1440px on both pages: zero overflow everywhere.
+
+- **Card borders were nearly invisible.** `#1f2b40` on the panel background is
+  1.33:1. Borders are the structural element of this theme, so they moved to
+  `#31456b` (1.97:1). Every text colour was re-verified against each background
+  it sits on; the dial hub is the binding case because it is the only surface
+  where text and colour meet.
+
+- **`prefers-reduced-motion` did not cover the glows.** It froze transitions but
+  `box-shadow` still jumped on hover, which is movement too.
+
 ## [0.4.0] - 2026-10-11
 
 Highlights: feat: device-cmyk() as input and as reference text, never as a colour (#25), plus 1 more change.

@@ -21,7 +21,7 @@
       spellcheck="false"
       autocomplete="off"
       autocapitalize="off"
-      placeholder="#ff0000 · hsl(49 100% 50%) · oklch(62.8% 64.42% 29.23) · device-cmyk(0% 100% 100% 0%)"
+      placeholder="#ff0000 · hsl(49 100% 50%) · oklch(62.8% 64.42% 29.23)"
       aria-describedby="colorInputNote"
     />
     <button type="button" class="apply-btn" id="applyColor">
@@ -59,15 +59,19 @@
       <span class="chip-key">device-cmyk()</span>
       <code id="chipCmykValue">device-cmyk(0% 0% 0% 0%)</code>
     </button>
-  </div>
 
-  <p class="input-note input-note-cmyk" id="cmykNote">
-    <strong>device-cmyk() no renderiza todavía.</strong> Ningún navegador la implementa
-    y es <em>device-dependent</em>: la misma tupla da colores distintos según la
-    impresora. Va como texto de referencia, no como color vivo. La conversión que ves es
-    una fórmula ingenua —una reparametrización de sRGB, como HSL—, no una predicción de
-    tinta.
-  </p>
+    <!-- El aviso vive DENTRO de `.output-chips`, que es un flex-wrap: al
+         envolver los chips pasa a su propia fila y ocupa todo el ancho. Como
+         `.input-note` hermano quedaba pegado al borde corto de la última fila
+         de chips, que es lo que se veía mal. -->
+    <p class="input-note input-note-cmyk" id="cmykNote">
+      <strong>device-cmyk() no renderiza todavía.</strong> Ningún navegador la
+      implementa y es <em>device-dependent</em>: la misma tupla da colores distintos
+      según la impresora. Va como texto de referencia, no como color vivo. La conversión
+      que ves es una fórmula ingenua —una reparametrización de sRGB, como HSL—, no una
+      predicción de tinta.
+    </p>
+  </div>
 
   <!-- Región de anuncio para el color actual. Se escribe con retardo, así que
        arrastrar un slider no produce un announcement por frame. -->

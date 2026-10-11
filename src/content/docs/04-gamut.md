@@ -2,6 +2,7 @@
 title: "Fuera de gamut: lo que pedís y lo que ves"
 description: CSS no recorta tus colores, los mapea. La insignia "Fuera de Gamut" mide la diferencia perceptual, no la contención.
 order: 4
+year: 2022
 ---
 
 Cada color sRGB tiene exactamente un triple OKLCH: la conversión es

@@ -36,11 +36,16 @@ const historia = `${base}historia/`;
     <ul class="timeline">
       {docs.map((doc) => (
         <li>
-          <a href={`#${doc.id}`}>
-            <span class="timeline-year">{doc.data.year ?? "—"}</span>
-            <h2 class="timeline-title">{doc.data.title}</h2>
-          </a>
-          <p class="timeline-desc">{doc.data.description}</p>
+          {/* El año va FUERA del enlace a propósito: dentro, no puede ser una
+              celda propia de la rejilla de la card, y quedaba encima del
+              título en vez de al costado. */}
+          <span class="timeline-year">{doc.data.year ?? "—"}</span>
+          <div class="timeline-body">
+            <a href={`#${doc.id}`}>
+              <h2 class="timeline-title">{doc.data.title}</h2>
+            </a>
+            <p class="timeline-desc">{doc.data.description}</p>
+          </div>
         </li>
       ))}
     </ul>
