@@ -5,41 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.4] - 2026-10-11
 
-### Added
+Highlights: feat: add CMYK and MDN colours features and fix: the whole navigation on the history page pointed nowhere, plus 4 more changes.
 
-- **`bun run release`** does the whole loop in one command: check, sync, check again.
-  The final check is the point — it confirms the sync actually left the releases
-  aligned instead of assuming it. `release:check` and `release:sync` stay for scripts
-  and CI.
-- **`build` is now a gate, not just a compile.** `bun run build` runs types, unit tests,
-  the build, and then the end-to-end suite, stopping at the first failure. `preview` and
-  `deploy` both go through it, so neither can serve or ship something unverified.
-  `bun run verify` is the first half on its own.
-
-### Fixed
-
-- Three ways the end-to-end suite could fail without saying why, all of them hit while
-  wiring the gate:
-  - A busy port crashed the process with a stack trace, because `server.listen` emits
-    `error` asynchronously instead of rejecting the promise. It now names the port and
-    how to free it.
-  - A half-served page failed the first check with `Cannot read properties of null`. The
-    suite now verifies the page loaded before checking anything, and names the likely
-    cause — `dist/` being rebuilt in parallel.
-  - `test:e2e` no longer builds. It used to, which would have recursed once `build`
-    started calling it: the suite tests the built site, so it has to run after it.
-
-- **The entire navigation on `/historia/` pointed nowhere.** Three of its four
-  cross-page links were broken: `./` resolved to the history page itself, and
-  `./historia/` plus `./historia/#03-croma` resolved to a doubled
-  `/hueplay/historia/historia/` and 404'd. `.` resolves against the current
-  directory, not the site root, so from `/hueplay/historia/` it means the page
-  you are already on. Both pages now build paths from `import.meta.env.BASE_URL`.
-- The end-to-end suite now resolves every same-origin link on both pages and
-  fetches it, rather than only checking that a fragment matches an id. Every
-  broken href above is well-formed, so the old check could not have caught it.
+- [x] 🚀 feat: add CMYK and MDN colours features
+  - `src/components/ColorInput.astro`
+  - `src/lib/color/convert.ts`
+  - `src/lib/color/index.ts`
+  - `src/lib/color/parse.ts`
+  - `src/lib/color/types.ts`
+  - `tests/color.test.ts`
+- [x] 📝 docs: record the broken navigation in the changelog
+- [x] 🐛 fix: the whole navigation on the history page pointed nowhere
+  - `src/pages/historia.astro`
+  - `src/pages/index.astro`
+  - `tests/e2e/run.mjs`
+- [x] 🧹 chore: nine scripts instead of twelve
+  - `AGENTS.md`
+  - `package.json`
+- [x] 📦 build: make build a gate, and have preview and deploy go through it (#24)
+  - `AGENTS.md`
+  - `package.json`
+  - `tests/e2e/run.mjs`
+- [x] 🚀 feat: fold release check and sync into one command (#23)
+  - `AGENTS.md`
+  - `package.json`
+  - `scripts/release.mjs`
 
 ## [0.3.3] - 2026-10-11
 

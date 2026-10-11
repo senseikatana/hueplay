@@ -1,6 +1,6 @@
 {
   "name": "hueplay",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Color Compass — HSL vs OKLCH playground and colour-model field guide, served at senseikatana.com/hueplay/*",
   "type": "module",
   "scripts": {
