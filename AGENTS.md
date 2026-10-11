@@ -57,17 +57,30 @@ Deployed as a Cloudflare Worker with Static Assets on `https://senseikatana.com/
 
 ```bash
 bun install      # once
-bun run dev      # astro dev      -> http://localhost:4321/hueplay/
-bun run verify   # types + unit tests, stops at the first failure
-bun run build    # verify -> build -> end-to-end suite
-bun run preview  # build (fully gated) -> serve it
-bun run deploy   # build (fully gated) -> Cloudflare
-bun test         # unit only
-bun run test:e2e # end-to-end only; needs a prior build
-bun run release       # check -> sync -> check, in one command
-bun run release:check # version <-> CHANGELOG <-> tags <-> releases
-bun run release:sync  # push the CHANGELOG section onto each GitHub release
+bun run dev      # astro dev
+bun run check    # types only
+bun run test     # unit tests only
+bun run e2e      # end-to-end only; needs a prior build
+bun run build    # check -> test -> build -> e2e, stops at the first failure
+bun run build:preview  # build (fully gated) -> serve it
+bun run build:deploy   # build (fully gated) -> Cloudflare
+bun run release  # check -> sync -> check, in one command
 ```
+
+There is no separate `verify` — `check` and `test` are one command apart and `build`
+chains them. There is no `release:check` / `release:sync` either: `release` is the entry
+point and calls the underlying scripts by path.
+
+### A routing difference you will trip over
+
+`bun run dev` and `bun run build:preview` both **404 on `/hueplay/historia`** with no
+trailing slash. Production does not: the Worker's `auto-trailing-slash` redirects it to
+`/hueplay/historia/`, which is the bug fixed in 0.3.2 and covered by the end-to-end
+suite, whose own server replicates the 307.
+
+This is Astro's dev/preview server, not the scripts. `dev` and `preview` behave
+identically, so it will not surprise you when switching between them — but when checking
+a link someone shared, use the slashed form locally.
 
 `astro dev` serves on **4321**, not 8787. The `base: "/hueplay"` means the dev URL is
 `http://localhost:4321/hueplay/`.
