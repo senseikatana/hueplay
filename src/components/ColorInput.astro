@@ -21,7 +21,7 @@
       spellcheck="false"
       autocomplete="off"
       autocapitalize="off"
-      placeholder="#ff0000 · hsl(49 100% 50%) · oklch(62.8% 64.42% 29.23)"
+      placeholder="#ff0000 · hsl(49 100% 50%) · oklch(62.8% 64.42% 29.23) · device-cmyk(0% 100% 100% 0%)"
       aria-describedby="colorInputNote"
     />
     <button type="button" class="apply-btn" id="applyColor">
@@ -84,6 +84,7 @@
   <p class="input-note" id="colorInputNote">
     Los chips equivalen al color del panel HSL. El alfa se ignora: la herramienta no
     tiene canal alfa. CIE LCH se dejó fuera a propósito: es un espacio de impresión
-    (blanco D50) y en proyectos web no aporta.
+    (blanco D50) y en proyectos web no aporta. <code>device-cmyk()</code> sí se acepta
+    como entrada, pero su chip es texto de referencia y no un color.
   </p>
 </div>
