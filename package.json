@@ -18,15 +18,15 @@
   "license": "MIT",
   "private": true,
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "astro": "^7.3.8",
-    "bun-types": "^1.4.3",
+    "@astrojs/check": "^0.9.12",
+    "astro": "^7.4.8",
+    "bun-types": "^1.4.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
-    "prettier-plugin-astro": "^1.1.1",
-    "typescript": "^5.9.3",
-    "wrangler": "^4.149.0"
+    "prettier-plugin-astro": "^1.1.2",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.159.0"
   },
   "lint-staged": {
     "*.{js,mjs,ts,astro,json,jsonc,md,yml,yaml,css,html}": [
