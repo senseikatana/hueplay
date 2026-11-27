@@ -1,9 +1,9 @@
-# Color Compass
+# Hueplay Color Compass
 
-Color Compass is a small, dependency-light playground for comparing HSL and
+Hueplay Color Compass is a small, dependency-light playground for comparing HSL and
 OKLCH colors. Astro builds static HTML, CSS, and vanilla TypeScript browser
 interaction, served by a Cloudflare Worker at
-[`senseikatana.com/hueplay/`](https://senseikatana.com/hueplay/).
+[`senseikatana.com/hueplay/`](https://samuraicoder.dev/works/hueplay).
 
 ## What you can do
 
@@ -25,6 +25,5 @@ interaction, served by a Cloudflare Worker at
 
 ## Repository
 
-Source code and issue tracking: [senseikatana/hueplay](https://github.com/senseikatana/hueplay).
-
-Contribution guidelines: [CONTRIBUTING.md](https://github.com/senseikatana/hueplay/blob/main/CONTRIBUTING.md).
+- Source code and issue tracking: [senseikatana/hueplay](https://github.com/senseikatana/hueplay).
+- Contribution guidelines: [CONTRIBUTING.md](https://github.com/senseikatana/hueplay/blob/main/CONTRIBUTING.md).

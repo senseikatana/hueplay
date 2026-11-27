@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- 📦 build: add ESLint 9, `eslint-plugin-astro`, `@typescript-eslint` (type-checked) and Prettier integration; add `lint`, `lint:fix`, `format`, `format:check`, `validate`, `check` and `check:types` scripts.
+- 🧹 fix: resolve the deprecated `document.execCommand` clipboard fallback in the dial and clean up worker test stubs.
+- 🤖 ci: run format, lint and type checks on pull requests without modifying files.
+
 ## [0.4.3] - 2026-11-27
 
 Maintenance release with 1 change.

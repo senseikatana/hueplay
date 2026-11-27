@@ -9,11 +9,6 @@ import worker from "../worker";
  * "las redirecciones no llevan headers de seguridad" sobrevivió tanto tiempo.
  */
 
-interface FetchArgs {
-  request: Request;
-  env: { ASSETS: { fetch: (req: Request) => Promise<Response> } };
-}
-
 const ASSET_BODY = "<!doctype html><title>ok</title>";
 
 /** Stub que responde 200 para lo que existe y 404 para el resto. */
@@ -23,15 +18,18 @@ const makeEnv = (overrides?: Partial<Record<string, string>>) => {
     seen,
     env: {
       ASSETS: {
-        fetch: async (req: Request) => {
+        fetch: (req: Request): Promise<Response> => {
           seen.push(req);
           const path = new URL(req.url).pathname;
-          if (path === "/nope") return new Response("Not found", { status: 404 });
+          if (path === "/nope")
+            return Promise.resolve(new Response("Not found", { status: 404 }));
           const body = overrides?.[path] ?? ASSET_BODY;
-          return new Response(body, {
-            status: 200,
-            headers: { "content-type": "text/html" },
-          });
+          return Promise.resolve(
+            new Response(body, {
+              status: 200,
+              headers: { "content-type": "text/html" },
+            }),
+          );
         },
       },
     },
@@ -45,7 +43,7 @@ const call = (
 ) =>
   worker.fetch(new Request(url, init), {
     ASSETS: env?.ASSETS ?? makeEnv().env.ASSETS,
-  } as FetchArgs["env"]) as Promise<Response>;
+  });
 
 const PRODUCTION = "https://senseikatana.com";
 
@@ -124,9 +122,7 @@ describe("headers de seguridad", () => {
   test("el throw del binding no se escapa sin headers", async () => {
     const env = {
       ASSETS: {
-        fetch: async () => {
-          throw new Error("boom");
-        },
+        fetch: () => Promise.reject(new Error("boom")),
       },
     };
     const res = await call(`${PRODUCTION}/hueplay/`, undefined, env);
@@ -167,11 +163,13 @@ describe("montaje de rutas", () => {
     const { env } = makeEnv({
       "/historia/": "<!doctype html><title>historia</title>",
     });
-    env.ASSETS.fetch = async () =>
-      new Response(null, {
-        status: 307,
-        headers: { location: "/historia/" },
-      });
+    env.ASSETS.fetch = () =>
+      Promise.resolve(
+        new Response(null, {
+          status: 307,
+          headers: { location: "/historia/" },
+        }),
+      );
 
     const res = await call(`${PRODUCTION}/hueplay/historia`, undefined, env);
     expect(res.status).toBe(307);
@@ -180,11 +178,13 @@ describe("montaje de rutas", () => {
 
   test("no repone el prefijo si el Location ya lo trae", async () => {
     const { env } = makeEnv();
-    env.ASSETS.fetch = async () =>
-      new Response(null, {
-        status: 307,
-        headers: { location: "/hueplay/otra/" },
-      });
+    env.ASSETS.fetch = () =>
+      Promise.resolve(
+        new Response(null, {
+          status: 307,
+          headers: { location: "/hueplay/otra/" },
+        }),
+      );
 
     const res = await call(`${PRODUCTION}/hueplay/otra`, undefined, env);
     expect(res.headers.get("location")).toBe("/hueplay/otra/");
@@ -192,11 +192,13 @@ describe("montaje de rutas", () => {
 
   test("no toca un Location absoluto (no es del binding)", async () => {
     const { env } = makeEnv();
-    env.ASSETS.fetch = async () =>
-      new Response(null, {
-        status: 307,
-        headers: { location: "https://otro.example/x" },
-      });
+    env.ASSETS.fetch = () =>
+      Promise.resolve(
+        new Response(null, {
+          status: 307,
+          headers: { location: "https://otro.example/x" },
+        }),
+      );
 
     const res = await call(`${PRODUCTION}/hueplay/x`, undefined, env);
     expect(res.headers.get("location")).toBe("https://otro.example/x");
