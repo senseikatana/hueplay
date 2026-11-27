@@ -38,7 +38,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          bun-version: "1.4.5"
 
       # --frozen-lockfile falla si bun.lock cambia. Es lo que hace que CI no
       # pueda pasar con un lockfile fuera de fecha que nadie commiteó.
