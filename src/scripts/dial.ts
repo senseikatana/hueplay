@@ -411,7 +411,12 @@ async function copyText(text: string): Promise<boolean> {
     ta.style.opacity = "0";
     document.body.append(ta);
     ta.select();
-    const ok = document.execCommand("copy");
+    // `execCommand` está deprecado en la especificación, pero sigue siendo el
+    // único fallback que funciona en Safari/iOS cuando Clipboard API falla.
+    // Se tipa aparte para no arrastrar la firma deprecada de lib.dom.
+    const ok = (
+      document as unknown as { execCommand(commandId: string): boolean }
+    ).execCommand("copy");
     ta.remove();
     return ok;
   } catch {

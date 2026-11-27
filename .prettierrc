@@ -2,5 +2,11 @@
   "plugins": ["prettier-plugin-astro"],
   "printWidth": 88,
   "trailingComma": "all",
-  "semi": true
+  "semi": true,
+  "endOfLine": "lf",
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "quoteProps": "as-needed"
 }

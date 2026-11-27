@@ -148,7 +148,7 @@ export function oklchHueToHslHue(
  */
 export function primaryOklchHues(s = 100, l = 50): (number | null)[] {
   const table = forwardTable(s, l);
-  if (table === null) return new Array(7).fill(null);
+  if (table === null) return Array<null | number>(7).fill(null);
   const out: (number | null)[] = [];
   for (let h = 0; h <= 360; h += 60) {
     // La tabla tiene 360 entradas: el tono 360 es el mismo color que el 0 y se
