@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-11-27
+
+Maintenance release with 1 change.
+
+- 📦 build(bun.lock): add astro, bun-types, lint-staged and prettier to package.json `48b1005`
+  - `bun.lock`
+  - `package.json`
+- 📦 build(bun.lock): add astro, @astrojs/check, bun-types and prettier-plugin-astro to package.json `4519b5a`
+- 🚀 feat: cyberpunk theme, and fix the horizontal overflow it exposed (#28) `868d48c`
+- 🤖 ci: check every pull request, and fix docs listing dead scripts (#20) (#26) `b394d08`
+- 🚀 feat: device-cmyk() as input and as reference text, never as a colour (#25) `caa9a5f`
+- 🔹 Correct README clone and setup commands (#14) `40ddbf4`
+
 ## [0.4.2] - 2026-11-10
 
 Maintenance release with 1 change.
