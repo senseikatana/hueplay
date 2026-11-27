@@ -5,9 +5,8 @@
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "types": ["bun-types"],
-    "baseUrl": ".",
     "paths": {
-      "@lib/*": ["src/lib/*"]
+      "@lib/*": ["./src/lib/*"]
     }
   },
   "include": [".astro/types.d.ts", "**/*.ts", "**/*.astro", "**/*.mjs"],

@@ -32,4 +32,4 @@ forwards assets to `env.ASSETS`. It applies security headers to responses,
 including redirects and errors. Binding-generated redirects are adjusted to
 preserve the mount prefix. Unknown paths return 404 without an SPA fallback.
 
-See [[Deployment]] for production commands and [[Development]] for checks.
+See [[Development]] for production commands and checks.

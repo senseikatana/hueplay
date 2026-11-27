@@ -5,6 +5,9 @@ OKLCH colors. Astro builds static HTML, CSS, and vanilla TypeScript browser
 interaction, served by a Cloudflare Worker at
 [`senseikatana.com/hueplay/`](https://samuraicoder.dev/works/hueplay).
 
+An optional katanakit-js integration (`defineApiConfig`, typed API tools) would
+live in `src/index.ts`; see [[Integration]] before adding it.
+
 ## What you can do
 
 - Paste a hex, `rgb()`, `hsl()`, or `oklch()` color and compare its values in
@@ -17,10 +20,10 @@ interaction, served by a Cloudflare Worker at
 
 ## Project guides
 
-- [[Development]] — local setup, commands, and test workflow.
+- [[Development]] — local setup, commands, deployment, and test workflow.
 - [[Architecture]] — browser code, color math, and Worker routing.
 - [[Color Math]] — conversion behavior, gamut, parser scope, and invariants.
-- [[Deployment]] — build and Cloudflare Worker deployment.
+- [[Integration]] — optional katanakit-js client and typed API tooling.
 - [[Improvement Proposals]] — prioritized, issue-tracked project improvements.
 
 ## Repository

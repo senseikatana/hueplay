@@ -16,14 +16,14 @@ The Astro development server serves `http://localhost:4321/hueplay/`.
 
 ## Commands
 
-| Command           | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| `bun test`        | Run color-math and Worker routing tests. |
-| `bun run check`   | Check Astro and TypeScript types.        |
-| `bun run build`   | Build static output into `dist/`.        |
-| `bun run dev`     | Start Astro's development server.        |
-| `bun run preview` | Preview the built site.                  |
-| `bun run deploy`  | Build and deploy the Cloudflare Worker.  |
+| Command                 | Purpose                                  |
+| ----------------------- | ---------------------------------------- |
+| `bun test`              | Run color-math and Worker routing tests. |
+| `bun run check`         | Check Astro and TypeScript types.        |
+| `bun run build`         | Build static output into `dist/`.        |
+| `bun run dev`           | Start Astro's development server.        |
+| `bun run build:preview` | Preview the built site.                  |
+| `bun run build:deploy`  | Build and deploy the Cloudflare Worker.  |
 
 Do not edit generated `dist/`, `.astro/`, or `.wrangler/` output. Respect
 Astro's configured `/hueplay` base in navigation and asset URLs.
@@ -50,7 +50,7 @@ on `senseikatana.com` and `www.senseikatana.com`.
 ```sh
 bun install
 bun run build
-bun run preview
+bun run build:preview
 ```
 
 Astro generates static output in `dist/`. Its configuration sets
@@ -64,7 +64,7 @@ Worker runtime check.
 ## Production
 
 ```sh
-bun run deploy
+bun run build:deploy
 ```
 
 The deploy script runs Astro's build and Wrangler deployment.
